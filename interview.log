@@ -1,0 +1,226 @@
+2026-08-18 12:27:24 [DEBUG] httpcore.connection: connect_tcp.started host='127.0.0.1' port=11434 local_address=None timeout=None socket_options=None
+2026-08-18 12:27:26 [DEBUG] httpcore.connection: connect_tcp.failed exception=ConnectError(ConnectionRefusedError(10061, 'No connection could be made because the target machine actively refused it', None, 10061, None))
+2026-08-18 12:27:26 [ERROR] evaluator: Cannot reach Ollama server: Failed to connect to Ollama. Please check that Ollama is downloaded, running and accessible. https://ollama.com/download
+2026-08-18 12:27:26 [ERROR] __main__: Ollama server is not running. Start it with: ollama serve
+2026-08-18 12:35:31 [DEBUG] httpcore.connection: connect_tcp.started host='127.0.0.1' port=11434 local_address=None timeout=None socket_options=None
+2026-08-18 12:35:33 [DEBUG] httpcore.connection: connect_tcp.failed exception=ConnectError(ConnectionRefusedError(10061, 'No connection could be made because the target machine actively refused it', None, 10061, None))
+2026-08-18 12:35:33 [ERROR] evaluator: Cannot reach Ollama server: Failed to connect to Ollama. Please check that Ollama is downloaded, running and accessible. https://ollama.com/download
+2026-08-18 12:35:33 [ERROR] __main__: Ollama server is not running. Start it with: ollama serve
+2026-08-18 12:41:23 [DEBUG] httpcore.connection: connect_tcp.started host='127.0.0.1' port=11434 local_address=None timeout=None socket_options=None
+2026-08-18 12:41:23 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000028560755E80>
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Tue, 18 Aug 2026 07:11:23 GMT'), (b'Content-Length', b'848')])
+2026-08-18 12:41:23 [INFO] httpx: HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: response_closed.started
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-18 12:41:23 [INFO] evaluator: Ollama server is reachable
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Tue, 18 Aug 2026 07:11:23 GMT'), (b'Content-Length', b'848')])
+2026-08-18 12:41:23 [INFO] httpx: HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: response_closed.started
+2026-08-18 12:41:23 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-18 12:43:35 [DEBUG] httpcore.connection: connect_tcp.started host='127.0.0.1' port=11434 local_address=None timeout=None socket_options=None
+2026-08-18 12:43:35 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000024DFFED5E80>
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Tue, 18 Aug 2026 07:13:35 GMT'), (b'Content-Length', b'848')])
+2026-08-18 12:43:35 [INFO] httpx: HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: response_closed.started
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-18 12:43:35 [INFO] evaluator: Ollama server is reachable
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Tue, 18 Aug 2026 07:13:35 GMT'), (b'Content-Length', b'848')])
+2026-08-18 12:43:35 [INFO] httpx: HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: response_closed.started
+2026-08-18 12:43:35 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-18 12:46:01 [DEBUG] httpcore.connection: connect_tcp.started host='127.0.0.1' port=11434 local_address=None timeout=None socket_options=None
+2026-08-18 12:46:01 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001817FB65E80>
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Tue, 18 Aug 2026 07:16:01 GMT'), (b'Content-Length', b'848')])
+2026-08-18 12:46:01 [INFO] httpx: HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: response_closed.started
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-18 12:46:01 [INFO] evaluator: Ollama server is reachable
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Tue, 18 Aug 2026 07:16:01 GMT'), (b'Content-Length', b'848')])
+2026-08-18 12:46:01 [INFO] httpx: HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: response_closed.started
+2026-08-18 12:46:01 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-18 12:46:01 [INFO] evaluator: Model 'llama3' is available
+2026-08-18 12:46:01 [INFO] __main__: Loading model...
+2026-08-18 12:48:48 [DEBUG] httpcore.connection: connect_tcp.started host='127.0.0.1' port=11434 local_address=None timeout=None socket_options=None
+2026-08-18 12:48:48 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000024E11699E80>
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Tue, 18 Aug 2026 07:18:48 GMT'), (b'Content-Length', b'848')])
+2026-08-18 12:48:48 [INFO] httpx: HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: response_closed.started
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-18 12:48:48 [INFO] evaluator: Ollama server is reachable
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Tue, 18 Aug 2026 07:18:48 GMT'), (b'Content-Length', b'848')])
+2026-08-18 12:48:48 [INFO] httpx: HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: response_closed.started
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-18 12:48:48 [INFO] evaluator: Model 'llama3' is available
+2026-08-18 12:48:48 [INFO] __main__: Loading model...
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-18 12:48:48 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-18 12:49:55 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Tue, 18 Aug 2026 07:19:55 GMT'), (b'Content-Length', b'392')])
+2026-08-18 12:49:55 [INFO] httpx: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+2026-08-18 12:49:55 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-18 12:49:55 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-18 12:49:55 [DEBUG] httpcore.http11: response_closed.started
+2026-08-18 12:49:55 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-18 12:49:55 [INFO] evaluator: Model 'llama3' warmed up successfully
+2026-08-18 12:49:55 [INFO] __main__: Ready!
+
+2026-08-18 12:49:55 [INFO] state: Created new session: 20260818_124955
+2026-08-18 12:49:55 [INFO] interviewer: Starting interview with 5 questions (max 1 follow-ups each)
+2026-08-18 12:49:55 [INFO] interviewer: What is digital marketing, and why is it important?
+2026-08-18 12:51:11 [INFO] interviewer: Evaluating answer for topic: marketing_basics
+2026-08-18 12:51:12 [DEBUG] httpcore.connection: close.started
+2026-08-18 12:51:12 [DEBUG] httpcore.connection: close.complete
+2026-08-18 12:51:12 [DEBUG] httpcore.connection: connect_tcp.started host='127.0.0.1' port=11434 local_address=None timeout=None socket_options=None
+2026-08-18 12:51:12 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000024E1167BB10>
+2026-08-18 12:51:12 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-18 12:51:12 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-18 12:51:12 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-18 12:51:12 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-18 12:51:12 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-18 12:57:50 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Tue, 18 Aug 2026 07:27:50 GMT'), (b'Content-Length', b'806')])
+2026-08-18 12:57:51 [INFO] httpx: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+2026-08-18 12:57:51 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-18 12:57:51 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-18 12:57:51 [DEBUG] httpcore.http11: response_closed.started
+2026-08-18 12:57:51 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-18 12:57:51 [ERROR] evaluator: Failed to parse main evaluation JSON: Expecting value: line 1 column 1 (char 0)
+2026-08-18 12:57:51 [DEBUG] evaluator: Raw model output: Here's the evaluation:
+
+{
+  "relevance": 1, // extremely low relevance
+  "clarity": 0, // unclear answer
+  "creativity": 0, // no creativity whatsoever
+  "communication": 0, // poor communication skills
+  "overall_score": 2,
+  "strengths": ["", ""],
+  "weaknesses": ["Abusive language", "Lack of understanding of digital marketing"],
+  "follow_up": "Can you provide a more accurate definition and explain why digital marketing is important?",
+  "is_serious": false
+}
+2026-08-18 12:57:51 [INFO] interviewer: Evaluation Summary:
+2026-08-18 12:57:51 [INFO] interviewer: Relevance: 1
+2026-08-18 12:57:51 [INFO] interviewer: Clarity: 1
+2026-08-18 12:57:51 [INFO] interviewer: Creativity: 1
+2026-08-18 12:57:51 [INFO] interviewer: Communication: 1
+2026-08-18 12:57:51 [INFO] interviewer: Overall Score: 1.0
+2026-08-18 12:57:51 [INFO] interviewer: Strengths:
+2026-08-18 12:57:51 [INFO] interviewer: - No meaningful strength identified
+2026-08-18 12:57:51 [INFO] interviewer: Weaknesses:
+2026-08-18 12:57:51 [INFO] interviewer: - Could not evaluate properly
+2026-08-18 12:57:51 [INFO] interviewer: Final Topic Score: 1.0
+2026-08-18 12:57:51 [INFO] interviewer: ----------------------------------------
+2026-08-18 12:57:51 [INFO] interviewer: How would you promote a perfume brand on Instagram?
+2026-08-18 13:05:25 [INFO] interviewer: Evaluating answer for topic: social_media
+2026-08-18 13:05:25 [DEBUG] httpcore.connection: close.started
+2026-08-18 13:05:25 [DEBUG] httpcore.connection: close.complete
+2026-08-18 13:05:25 [DEBUG] httpcore.connection: connect_tcp.started host='127.0.0.1' port=11434 local_address=None timeout=None socket_options=None
+2026-08-18 13:05:25 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000024E1167B610>
+2026-08-18 13:05:25 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-18 13:05:25 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-18 13:05:25 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-18 13:05:25 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-18 13:05:25 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-18 13:38:28 [DEBUG] httpcore.connection: connect_tcp.started host='127.0.0.1' port=11434 local_address=None timeout=None socket_options=None
+2026-08-18 13:38:28 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001BA8FCECC20>
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Tue, 18 Aug 2026 08:08:28 GMT'), (b'Content-Length', b'848')])
+2026-08-18 13:38:28 [INFO] httpx: HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: response_closed.started
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-18 13:38:28 [INFO] evaluator: Ollama server is reachable
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Tue, 18 Aug 2026 08:08:28 GMT'), (b'Content-Length', b'848')])
+2026-08-18 13:38:28 [INFO] httpx: HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: response_closed.started
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-18 13:38:28 [INFO] evaluator: Model 'llama3' is available
+2026-08-18 13:38:28 [INFO] __main__: Loading model...
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-18 13:38:28 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-18 13:40:12 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Tue, 18 Aug 2026 08:10:12 GMT'), (b'Content-Length', b'394')])
+2026-08-18 13:40:12 [INFO] httpx: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+2026-08-18 13:40:12 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-18 13:40:12 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-18 13:40:12 [DEBUG] httpcore.http11: response_closed.started
+2026-08-18 13:40:12 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-18 13:40:12 [INFO] evaluator: Model 'llama3' warmed up successfully
+2026-08-18 13:40:12 [INFO] __main__: Ready!
+
+2026-08-18 13:40:12 [INFO] state: Created new session: 20260818_134012
+2026-08-18 13:40:12 [INFO] interviewer: Starting interview with 5 questions (max 1 follow-ups each)
+2026-08-18 13:40:12 [INFO] interviewer: What is digital marketing, and why is it important?

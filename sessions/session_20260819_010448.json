@@ -1,0 +1,43 @@
+{
+  "session_id": "20260819_010448",
+  "started_at": "2026-08-19T01:04:48.117937",
+  "topic_scores": {
+    "seo": 6.8
+  },
+  "answers": [
+    {
+      "question": "What is SEO?",
+      "answer": "This is a comprehensive marketing answer with SEO strategy details",
+      "topic": "seo",
+      "evaluation": {
+        "relevance": 7,
+        "clarity": 7,
+        "creativity": 6,
+        "communication": 7,
+        "overall_score": 6.8,
+        "strengths": [
+          "Good basics"
+        ],
+        "weaknesses": [
+          "Needs examples"
+        ],
+        "follow_up": "",
+        "is_serious": true
+      },
+      "timestamp": "2026-08-19T01:04:48.118232",
+      "timing": {
+        "answer_time_seconds": 0.0,
+        "eval_time_seconds": 0.0
+      }
+    }
+  ],
+  "warnings": [],
+  "seriousness_flags": [],
+  "strong_topics": [],
+  "weak_topics": [],
+  "finished_at": "2026-08-19T01:04:48.118306",
+  "_avg": 6.8,
+  "verdict": "Average",
+  "average_score": 6.8,
+  "total_time_seconds": 0.0
+}

@@ -1,0 +1,86 @@
+# Interview Simulator Configuration
+
+# LLM Settings
+llm:
+  provider: "ollama"
+  model: "llama3"
+  timeout: 60
+  keep_alive: "10m"
+  max_retries: 3
+  retry_delay: 2
+
+# Scoring Weights (must sum to 1.0)
+scoring:
+  relevance_weight: 0.3
+  clarity_weight: 0.25
+  creativity_weight: 0.25
+  communication_weight: 0.2
+
+# Follow-up merge weights
+merge:
+  main_weight: 0.7
+  followup_weight: 0.3
+
+# Interview Settings
+interview:
+  max_followups_per_question: 1
+  min_answer_length: 5
+  question_count: 5
+  show_feedback: true
+  show_score_after_answer: true
+
+# Verdict Thresholds
+verdicts:
+  strong_threshold: 7
+  average_threshold: 5
+
+# Resume Settings
+resume:
+  supported_formats: [".pdf", ".docx", ".doc", ".txt"]
+  min_quality_score: 30
+  required_sections: ["contact", "skills", "experience"]
+  quality_weights:
+    contact_info: 15
+    skills_high: 25
+    skills_mid: 15
+    skills_low: 8
+    experience_years: 20
+    experience_titles: 12
+    education: 20
+    name: 10
+    length_high: 10
+    length_mid: 6
+    skill_thresholds:
+      high: 5
+      mid: 3
+    length_thresholds:
+      high: 150
+      mid: 80
+
+# Question Engine
+question_engine:
+  use_llm_generation: true
+  randomize_order: true
+  anti_repeat_window: 50
+  topic_coverage_weight: 0.3
+  difficulty_distribution:
+    fresher:
+      easy: 0.7
+      medium: 0.3
+      hard: 0.0
+    mid:
+      easy: 0.2
+      medium: 0.6
+      hard: 0.2
+    senior:
+      easy: 0.0
+      medium: 0.4
+      hard: 0.6
+    unknown:
+      easy: 0.3
+      medium: 0.5
+      hard: 0.2
+
+# Logging
+logging:
+  level: "INFO"

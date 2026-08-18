@@ -1,0 +1,5 @@
+ollama
+pyyaml
+pytest
+pdfplumber
+python-docx
