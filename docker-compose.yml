@@ -1,0 +1,63 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    command: uvicorn backend.app:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - db
+    networks:
+      - interview-network
+
+  frontend-candidate:
+    build:
+      context: ./frontend/candidate
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - backend
+    networks:
+      - interview-network
+
+  frontend-company:
+    build:
+      context: ./frontend/company
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    env_file:
+      - .env
+    depends_on:
+      - backend
+    networks:
+      - interview-network
+
+  db:
+    image: supabase/postgres:15.1.0
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-interview_agent}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./supabase/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    networks:
+      - interview-network
+
+volumes:
+  pgdata:
+
+networks:
+  interview-network:

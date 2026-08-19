@@ -1,5 +1,12 @@
-ollama
-pyyaml
-pytest
-pdfplumber
-python-docx
+# Interview Agent — Backend
+# For Docker deployment
+
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+httpx>=0.25.0
+pydantic[email]>=2.5.0
+python-dotenv>=1.0.0
+supabase>=2.0.0
+
+# LLM (local Ollama)
+ollama>=0.1.0
