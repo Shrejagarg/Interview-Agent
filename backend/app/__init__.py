@@ -1,7 +1,10 @@
 """Interview Agent API — FastAPI Backend"""
 
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from backend.app.config import CORS_ORIGINS
 from backend.app.api import auth, domains, interviews, analytics
 
 app = FastAPI(
@@ -14,7 +17,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -33,4 +36,9 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "2.0.0"}
+    from backend.app.config import is_supabase_configured
+    return {
+        "status": "ok",
+        "version": "2.0.0",
+        "supabase_configured": is_supabase_configured(),
+    }

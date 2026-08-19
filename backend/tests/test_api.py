@@ -1,162 +1,310 @@
-"""Tests for FastAPI endpoints"""
+"""Tests for FastAPI endpoints — covers all Phase I fixes"""
 
 import sys
 import os
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from fastapi.testclient import TestClient
 from backend.app import app
+from backend.app.api.interviews import _sessions
+
+
+def _mock_llm(prompt: str) -> str:
+    """Return a plausible LLM evaluation JSON without calling Ollama."""
+    import json
+    return json.dumps({
+        "overall_score": 70,
+        "technical_knowledge": 65,
+        "communication": 75,
+        "strengths": ["Good structure"],
+        "weaknesses": ["Could be more specific"],
+        "follow_up": "",
+        "is_serious": True,
+    })
+
 
 client = TestClient(app)
 
+# Patch ollama calls globally for all tests in this module
+_patches = [
+    patch("backend.app.api.interviews._call_llm", side_effect=_mock_llm),
+]
+
+
+def setup_module():
+    for p in _patches:
+        p.start()
+
+
+def teardown_module():
+    for p in _patches:
+        p.stop()
+
+
+def _start_session(domain: str, count: int = 2) -> str:
+    """Helper: start an interview and return session_id."""
+    resp = client.post("/api/interviews/start", json={
+        "domain_slug": domain,
+        "question_count": count,
+    })
+    return resp.json()["session_id"]
+
+
+def _answer_all(session_id: str):
+    """Helper: answer every question in a session with dummy text."""
+    while True:
+        resp = client.get(f"/api/interviews/{session_id}/question")
+        if resp.status_code != 200:
+            break
+        q = resp.json()
+        client.post(f"/api/interviews/{session_id}/answer", json={
+            "question_id": q["id"],
+            "answer_text": "This is my detailed answer covering the key points.",
+        })
+
+
+# ── Root / Health ─────────────────────────────────────────────────────────────
 
 class TestRootAndHealth:
-    """Test basic endpoints."""
-
     def test_root(self):
-        response = client.get("/")
-        assert response.status_code == 200
-        assert "Interview Agent API" in response.json()["message"]
+        r = client.get("/")
+        assert r.status_code == 200
+        assert "Interview Agent API" in r.json()["message"]
 
     def test_health(self):
-        response = client.get("/health")
-        assert response.status_code == 200
-        assert response.json()["status"] == "ok"
+        r = client.get("/health")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["status"] == "ok"
+        assert "supabase_configured" in body
 
+
+# ── Domains ───────────────────────────────────────────────────────────────────
 
 class TestDomainsAPI:
-    """Test domain endpoints."""
-
     def test_list_domains(self):
-        response = client.get("/api/domains")
-        assert response.status_code == 200
-        data = response.json()
-        assert "domains" in data
-        assert len(data["domains"]) == 5
+        r = client.get("/api/domains")
+        assert r.status_code == 200
+        assert len(r.json()["domains"]) == 5
 
     def test_get_marketing_domain(self):
-        response = client.get("/api/domains/marketing")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["slug"] == "marketing"
-        assert data["question_count"] > 0
+        r = client.get("/api/domains/marketing")
+        assert r.status_code == 200
+        assert r.json()["slug"] == "marketing"
+        assert r.json()["question_count"] > 0
 
     def test_get_nonexistent_domain(self):
-        response = client.get("/api/domains/nonexistent")
-        assert response.status_code == 404
+        assert client.get("/api/domains/nonexistent").status_code == 404
 
     def test_get_domain_questions(self):
-        response = client.get("/api/domains/marketing/questions")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["count"] > 0
+        r = client.get("/api/domains/marketing/questions")
+        assert r.status_code == 200
+        assert r.json()["count"] > 0
 
     def test_get_domain_questions_filtered(self):
-        response = client.get("/api/domains/marketing/questions?difficulty=hard")
-        assert response.status_code == 200
-        for q in response.json()["questions"]:
+        r = client.get("/api/domains/marketing/questions?difficulty=hard")
+        assert r.status_code == 200
+        for q in r.json()["questions"]:
             assert q["difficulty"] == "hard"
 
     def test_get_domain_skills(self):
-        response = client.get("/api/domains/marketing/skills")
-        assert response.status_code == 200
-        assert "skills" in response.json()
+        r = client.get("/api/domains/marketing/skills")
+        assert r.status_code == 200
+        assert "skills" in r.json()
 
     def test_all_domains_accessible(self):
-        slugs = ["marketing", "software_engineering", "finance", "hr", "sales"]
-        for slug in slugs:
-            response = client.get(f"/api/domains/{slug}")
-            assert response.status_code == 200, f"Domain {slug} not accessible"
-            assert response.json()["slug"] == slug
+        for slug in ["marketing", "software_engineering", "finance", "hr", "sales"]:
+            r = client.get(f"/api/domains/{slug}")
+            assert r.status_code == 200
+            assert r.json()["slug"] == slug
 
+
+# ── Interviews: Start / Question / Answer flow ────────────────────────────────
 
 class TestInterviewsAPI:
-    """Test interview endpoints."""
-
     def test_start_interview(self):
-        response = client.post("/api/interviews/start", json={
+        r = client.post("/api/interviews/start", json={
             "domain_slug": "marketing",
             "question_count": 3,
         })
-        assert response.status_code == 200
-        data = response.json()
-        assert "session_id" in data
-        assert data["question_count"] == 3
-        assert data["current_question"] is not None
+        assert r.status_code == 200
+        body = r.json()
+        assert "session_id" in body
+        assert body["question_count"] == 3
+        assert body["current_question"] is not None
+        assert "experience_level" in body
 
     def test_start_interview_invalid_domain(self):
-        response = client.post("/api/interviews/start", json={
-            "domain_slug": "nonexistent",
-        })
-        assert response.status_code == 404
+        r = client.post("/api/interviews/start", json={"domain_slug": "nonexistent"})
+        assert r.status_code == 404
 
-    def test_get_question(self):
-        start = client.post("/api/interviews/start", json={
+    def test_start_with_experience_level(self):
+        r = client.post("/api/interviews/start", json={
             "domain_slug": "finance",
             "question_count": 2,
-        }).json()
-        session_id = start["session_id"]
+            "experience_level": "senior",
+        })
+        assert r.status_code == 200
+        assert r.json()["experience_level"] == "senior"
 
-        response = client.get(f"/api/interviews/{session_id}/question")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["index"] == 1
-        assert data["total"] == 2
-
-    def test_submit_answer_and_next(self):
-        start = client.post("/api/interviews/start", json={
+    def test_start_with_resume_data(self):
+        r = client.post("/api/interviews/start", json={
             "domain_slug": "hr",
             "question_count": 2,
-        }).json()
-        session_id = start["session_id"]
-
-        q1 = client.get(f"/api/interviews/{session_id}/question").json()
-        response = client.post(f"/api/interviews/{session_id}/answer", json={
-            "session_id": session_id,
-            "question_id": q1["id"],
-            "answer_text": "I would handle this by listening to both sides.",
+            "resume_data": {"years_experience": 7},
         })
-        assert response.status_code == 200
-        data = response.json()
-        assert data["has_next"] is True
-        assert data["next_question"]["index"] == 2
+        assert r.status_code == 200
+        assert r.json()["experience_level"] == "senior"
 
-    def test_complete_interview(self):
-        start = client.post("/api/interviews/start", json={
-            "domain_slug": "sales",
-            "question_count": 1,
-        }).json()
-        session_id = start["session_id"]
+    def test_get_question(self):
+        sid = _start_session("finance")
+        r = client.get(f"/api/interviews/{sid}/question")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["index"] == 1
+        assert body["total"] == 2
 
-        q = client.get(f"/api/interviews/{session_id}/question").json()
-        client.post(f"/api/interviews/{session_id}/answer", json={
-            "session_id": session_id,
+    def test_submit_answer_returns_evaluation(self):
+        sid = _start_session("hr")
+        q = client.get(f"/api/interviews/{sid}/question").json()
+        r = client.post(f"/api/interviews/{sid}/answer", json={
             "question_id": q["id"],
-            "answer_text": "I focus on building trust first.",
+            "answer_text": "I would listen to both employees and mediate a resolution.",
         })
+        assert r.status_code == 200
+        body = r.json()
+        assert body["answer_recorded"] is True
+        assert "evaluation" in body
+        assert "overall_score" in body["evaluation"]
+        assert 0 <= body["evaluation"]["overall_score"] <= 100
 
-        response = client.get(f"/api/interviews/{session_id}/report")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "completed"
+    def test_submit_answer_too_short(self):
+        sid = _start_session("sales")
+        q = client.get(f"/api/interviews/{sid}/question").json()
+        r = client.post(f"/api/interviews/{sid}/answer", json={
+            "question_id": q["id"],
+            "answer_text": "No",
+        })
+        assert r.status_code == 422
+
+    def test_complete_interview_and_report(self):
+        sid = _start_session("sales", count=1)
+        q = client.get(f"/api/interviews/{sid}/question").json()
+        client.post(f"/api/interviews/{sid}/answer", json={
+            "question_id": q["id"],
+            "answer_text": "I focus on building long-term trust with clients.",
+        })
+        r = client.get(f"/api/interviews/{sid}/report")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["status"] == "completed"
+        assert "overall_score" in body
+        assert "topic_scores" in body
+        assert "verdict" in body
+        assert "recommendations" in body
+        assert "answers" in body
+        assert len(body["answers"]) == 1
+        assert body["answers"][0]["score"] >= 0
+
+    def test_report_shows_per_answer_details(self):
+        sid = _start_session("marketing", count=1)
+        q = client.get(f"/api/interviews/{sid}/question").json()
+        client.post(f"/api/interviews/{sid}/answer", json={
+            "question_id": q["id"],
+            "answer_text": "A good SEO strategy includes keyword research and backlinks.",
+        })
+        r = client.get(f"/api/interviews/{sid}/report").json()
+        a = r["answers"][0]
+        assert "question" in a
+        assert "topic" in a
+        assert "score" in a
+        assert "strengths" in a
+        assert "weaknesses" in a
 
     def test_nonexistent_session(self):
-        response = client.get("/api/interviews/fake-id/question")
-        assert response.status_code == 404
-
-
-class TestAnalyticsAPI:
-    """Test analytics endpoints."""
+        assert client.get("/api/interviews/fake-id/question").status_code == 404
 
     def test_list_sessions(self):
-        response = client.get("/api/analytics/sessions")
-        assert response.status_code == 200
+        _start_session("finance", count=1)
+        r = client.get("/api/interviews")
+        assert r.status_code == 200
+        assert len(r.json()["sessions"]) >= 1
+
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+
+class TestAuthAPI:
+    def test_me_requires_auth(self):
+        r = client.get("/api/auth/me")
+        assert r.status_code == 401 or r.status_code == 422
+
+    def test_me_dev_bypass(self):
+        r = client.get("/api/auth/me", headers={"Authorization": "Bearer dev-token"})
+        assert r.status_code == 200
+        assert r.json()["user_id"] == "dev-user-id"
+
+    def test_register_no_supabase(self):
+        r = client.post("/api/auth/register", json={
+            "email": "test@example.com",
+            "password": "pass12345",
+            "role": "candidate",
+        })
+        assert r.status_code == 503
+
+    def test_register_invalid_role(self):
+        r = client.post("/api/auth/register", json={
+            "email": "test@example.com",
+            "password": "pass12345",
+            "role": "admin",
+        })
+        assert r.status_code == 422
+
+
+# ── Analytics ─────────────────────────────────────────────────────────────────
+
+class TestAnalyticsAPI:
+    def test_list_sessions(self):
+        _start_session("marketing", count=1)
+        r = client.get("/api/analytics/sessions")
+        assert r.status_code == 200
+        assert r.json()["total"] >= 1
+
+    def test_list_sessions_filter_domain(self):
+        _start_session("marketing", count=1)
+        r = client.get("/api/analytics/sessions?domain=marketing")
+        assert r.status_code == 200
+        for s in r.json()["sessions"]:
+            assert s["domain"] == "marketing"
 
     def test_compare_sessions(self):
-        response = client.get("/api/analytics/compare?session_ids=abc,def")
-        assert response.status_code == 200
+        s1 = _start_session("marketing", count=1)
+        s2 = _start_session("finance", count=1)
+        r = client.get(f"/api/analytics/compare?session_ids={s1},{s2}")
+        assert r.status_code == 200
+        body = r.json()
+        assert len(body["sessions"]) == 2
+        assert "rankings" in body
+        assert "topic_averages" in body
+
+    def test_compare_needs_two(self):
+        s1 = _start_session("marketing", count=1)
+        r = client.get(f"/api/analytics/compare?session_ids={s1}")
+        assert r.status_code == 422
 
     def test_recommendations(self):
-        response = client.get("/api/analytics/recommendations/some-id")
-        assert response.status_code == 200
+        sid = _start_session("hr", count=1)
+        q = client.get(f"/api/interviews/{sid}/question").json()
+        client.post(f"/api/interviews/{sid}/answer", json={
+            "question_id": q["id"],
+            "answer_text": "I handle recruitment by building diverse candidate pipelines.",
+        })
+        r = client.get(f"/api/analytics/recommendations/{sid}")
+        assert r.status_code == 200
+        body = r.json()
+        assert "recommendations" in body
+        assert "overall_score" in body
+
+    def test_recommendations_unknown_session(self):
+        assert client.get("/api/analytics/recommendations/fake-id").status_code == 404

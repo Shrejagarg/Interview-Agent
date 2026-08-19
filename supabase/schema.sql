@@ -1,7 +1,6 @@
 -- Interview Agent Database Schema
 -- Run this in Supabase SQL Editor
 
--- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================
@@ -30,7 +29,6 @@ CREATE TABLE IF NOT EXISTS companies (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Add foreign key from profiles to companies
 ALTER TABLE profiles ADD CONSTRAINT fk_profiles_company
     FOREIGN KEY (company_id) REFERENCES companies(id);
 
@@ -92,7 +90,8 @@ CREATE TABLE IF NOT EXISTS job_titles (
     domain_id UUID REFERENCES domains(id) ON DELETE CASCADE,
     level TEXT NOT NULL CHECK (level IN ('fresher', 'mid', 'senior')),
     title TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(domain_id, level, title)
 );
 
 -- ============================================
@@ -102,8 +101,10 @@ CREATE TABLE IF NOT EXISTS sessions (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES profiles(id),
     domain_slug TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'completed', 'cancelled')),
     company_id UUID REFERENCES companies(id),
     job_id UUID,
+    experience_level TEXT CHECK (experience_level IN ('fresher', 'mid', 'senior')),
     started_at TIMESTAMPTZ DEFAULT NOW(),
     finished_at TIMESTAMPTZ,
     average_score DECIMAL(5,2) DEFAULT 0,
@@ -117,6 +118,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE INDEX idx_sessions_user ON sessions(user_id);
 CREATE INDEX idx_sessions_domain ON sessions(domain_slug);
+CREATE INDEX idx_sessions_status ON sessions(status);
 
 -- ============================================
 -- ANSWERS
@@ -124,10 +126,11 @@ CREATE INDEX idx_sessions_domain ON sessions(domain_slug);
 CREATE TABLE IF NOT EXISTS answers (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
-    question_id UUID REFERENCES questions(id),
+    question_id UUID,
     question_text TEXT,
     answer_text TEXT,
     topic TEXT,
+    difficulty TEXT,
     evaluation JSONB,
     timing JSONB,
     timestamp TIMESTAMPTZ DEFAULT NOW()
@@ -156,7 +159,6 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE INDEX idx_jobs_company ON jobs(company_id);
 CREATE INDEX idx_jobs_domain ON jobs(domain_slug);
 
--- Add job_id foreign key to sessions
 ALTER TABLE sessions ADD CONSTRAINT fk_sessions_job
     FOREIGN KEY (job_id) REFERENCES jobs(id);
 
@@ -164,23 +166,23 @@ ALTER TABLE sessions ADD CONSTRAINT fk_sessions_job
 -- SEED DATA: Insert domains
 -- ============================================
 INSERT INTO domains (slug, name, description, topics, scoring_dimensions) VALUES
-('marketing', 'Marketing', 'Digital marketing, branding, analytics, social media',
+('marketing', 'Marketing', 'Digital marketing, branding, analytics, social media, and campaign strategy',
  '["digital_marketing","seo","social_media","content_marketing","analytics","branding","ppc","email_marketing","situational","automation","product_marketing","influencer_marketing","competitive_analysis","conversion_optimization"]',
  '["relevance","clarity","creativity","communication"]'),
 
-('software_engineering', 'Software Engineering', 'DSA, system design, OOP, databases, APIs',
+('software_engineering', 'Software Engineering', 'DSA, system design, OOP, databases, APIs, and software architecture',
  '["dsa","system_design","oop","databases","api_design","algorithms","data_structures","testing","devops","security","performance","code_review"]',
  '["technical_depth","problem_solving","communication","code_quality"]'),
 
-('finance', 'Finance', 'Valuation, accounting, markets, financial modeling',
+('finance', 'Finance', 'Valuation, accounting, markets, financial modeling, and analysis',
  '["accounting","valuation","financial_modeling","markets","risk_management","corporate_finance","investments","taxation"]',
  '["analytical_rigor","technical_knowledge","communication","practical_application"]'),
 
-('hr', 'Human Resources', 'Recruitment, employee relations, labor law, L&D',
+('hr', 'Human Resources', 'Recruitment, employee relations, labor law, L&D, and organizational development',
  '["recruitment","employee_relations","labor_law","learning_development","compensation_benefits","performance_management","diversity_inclusion","hr_analytics"]',
  '["empathy","technical_knowledge","communication","problem_solving"]'),
 
-('sales', 'Sales', 'Pipeline management, negotiation, CRM, cold outreach',
+('sales', 'Sales', 'Pipeline management, negotiation, CRM, cold outreach, and closing',
  '["pipeline","negotiation","crm","cold_outreach","closing","prospecting","relationship_building","sales_analytics"]',
  '["persuasion","product_knowledge","communication","strategic_thinking"]')
 ON CONFLICT (slug) DO NOTHING;
@@ -188,33 +190,53 @@ ON CONFLICT (slug) DO NOTHING;
 -- ============================================
 -- ROW LEVEL SECURITY
 -- ============================================
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE answers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
 
--- Users can read/update their own profile
+-- Profiles
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
 
--- Users can view their own sessions
+-- Companies
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view own company" ON companies FOR SELECT
+    USING (owner_id = auth.uid());
+CREATE POLICY "Users can update own company" ON companies FOR UPDATE
+    USING (owner_id = auth.uid());
+CREATE POLICY "Users can create own company" ON companies FOR INSERT
+    WITH CHECK (owner_id = auth.uid());
+
+-- Sessions
+ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own sessions" ON sessions FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can create own sessions" ON sessions FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own sessions" ON sessions FOR UPDATE USING (auth.uid() = user_id);
 
--- Users can view their own answers
+-- Answers
+ALTER TABLE answers ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own answers" ON answers FOR SELECT
     USING (session_id IN (SELECT id FROM sessions WHERE user_id = auth.uid()));
+CREATE POLICY "Users can insert own answers" ON answers FOR INSERT
+    WITH CHECK (session_id IN (SELECT id FROM sessions WHERE user_id = auth.uid()));
 
--- Companies can view their own jobs and candidates
+-- Jobs
+ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Companies can view own jobs" ON jobs FOR SELECT
     USING (company_id IN (SELECT id FROM companies WHERE owner_id = auth.uid()));
+CREATE POLICY "Companies can manage own jobs" ON jobs FOR ALL
+    USING (company_id IN (SELECT id FROM companies WHERE owner_id = auth.uid()));
 
--- Public read access for domains, questions, skills
+-- Job titles (public read, admin write)
+ALTER TABLE job_titles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read job_titles" ON job_titles FOR SELECT USING (true);
+
+-- Domains (public read)
 ALTER TABLE domains ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read domains" ON domains FOR SELECT USING (true);
 
+-- Questions (public read)
 ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read questions" ON questions FOR SELECT USING (true);
 
+-- Skills (public read)
 ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read skills" ON skills FOR SELECT USING (true);

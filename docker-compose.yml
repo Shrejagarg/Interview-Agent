@@ -13,7 +13,13 @@ services:
       - .:/app
     command: uvicorn backend.app:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - interview-network
 
@@ -26,7 +32,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - interview-network
 
@@ -39,7 +46,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - interview-network
 
@@ -53,6 +61,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./supabase/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - interview-network
 

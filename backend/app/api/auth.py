@@ -1,15 +1,24 @@
-"""Authentication endpoints — Supabase Auth integration"""
+"""Authentication endpoints — Supabase Auth integration with JWT verification"""
 
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, EmailStr
+import logging
 from typing import Optional
-import os
 
+import httpx
+from fastapi import APIRouter, HTTPException, Depends, Header
+from pydantic import BaseModel, EmailStr
+
+from backend.app.config import (
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
+    ENV,
+    is_supabase_configured,
+)
+
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
+# ── Models ────────────────────────────────────────────────────────────────────
 
 class RegisterRequest(BaseModel):
     email: EmailStr
@@ -31,16 +40,72 @@ class AuthResponse(BaseModel):
     role: str
 
 
+class UserProfile(BaseModel):
+    user_id: str
+    email: str
+    role: str
+    full_name: Optional[str] = None
+
+
+# ── JWT Dependency ────────────────────────────────────────────────────────────
+
+async def get_current_user(authorization: str = Header(None)) -> UserProfile:
+    """Verify the Supabase JWT and return the user profile.
+
+    Falls back to a dev-mode bypass when Supabase is not configured.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or malformed Authorization header")
+
+    token = authorization.split(" ", 1)[1]
+
+    if not is_supabase_configured():
+        if ENV == "development":
+            return UserProfile(
+                user_id="dev-user-id",
+                email="dev@example.com",
+                role="candidate",
+            )
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+
+    try:
+        response = httpx.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers={
+                "apikey": SUPABASE_ANON_KEY,
+                "Authorization": f"Bearer {token}",
+            },
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+        data = response.json()
+        return UserProfile(
+            user_id=data["id"],
+            email=data["email"],
+            role=data.get("app_metadata", {}).get("role", "candidate"),
+            full_name=data.get("user_metadata", {}).get("full_name"),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("JWT verification failed: %s", e)
+        raise HTTPException(status_code=401, detail="Token verification failed")
+
+
+# ── Endpoints ─────────────────────────────────────────────────────────────────
+
 @router.post("/register", response_model=AuthResponse)
 def register(req: RegisterRequest):
     """Register a new user via Supabase Auth."""
-    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+    if req.role not in ("candidate", "company"):
+        raise HTTPException(status_code=422, detail="role must be 'candidate' or 'company'")
+
+    if not is_supabase_configured():
         raise HTTPException(
             status_code=503,
-            detail="Supabase not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY."
+            detail="Supabase not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY.",
         )
-
-    import httpx
 
     response = httpx.post(
         f"{SUPABASE_URL}/auth/v1/signup",
@@ -50,16 +115,19 @@ def register(req: RegisterRequest):
             "data": {
                 "full_name": req.full_name,
                 "role": req.role,
-            }
+            },
         },
         headers={
             "apikey": SUPABASE_ANON_KEY,
             "Content-Type": "application/json",
-        }
+        },
     )
 
     if response.status_code != 200:
-        detail = response.json().get("msg", "Registration failed")
+        try:
+            detail = response.json().get("msg", "Registration failed")
+        except Exception:
+            detail = "Registration failed"
         raise HTTPException(status_code=response.status_code, detail=detail)
 
     data = response.json()
@@ -74,13 +142,11 @@ def register(req: RegisterRequest):
 @router.post("/login", response_model=AuthResponse)
 def login(req: LoginRequest):
     """Login via Supabase Auth."""
-    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+    if not is_supabase_configured():
         raise HTTPException(
             status_code=503,
-            detail="Supabase not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY."
+            detail="Supabase not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY.",
         )
-
-    import httpx
 
     response = httpx.post(
         f"{SUPABASE_URL}/auth/v1/token?grant_type=password",
@@ -91,11 +157,14 @@ def login(req: LoginRequest):
         headers={
             "apikey": SUPABASE_ANON_KEY,
             "Content-Type": "application/json",
-        }
+        },
     )
 
     if response.status_code != 200:
-        detail = response.json().get("msg", "Login failed")
+        try:
+            detail = response.json().get("msg", "Login failed")
+        except Exception:
+            detail = "Login failed"
         raise HTTPException(status_code=response.status_code, detail=detail)
 
     data = response.json()
@@ -110,7 +179,7 @@ def login(req: LoginRequest):
     )
 
 
-@router.get("/me")
-def get_current_user():
-    """Get current user profile (placeholder — requires JWT verification)."""
-    return {"message": "TODO: Implement JWT verification with Supabase"}
+@router.get("/me", response_model=UserProfile)
+async def get_me(user: UserProfile = Depends(get_current_user)):
+    """Get the currently authenticated user's profile."""
+    return user
