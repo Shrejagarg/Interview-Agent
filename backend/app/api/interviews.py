@@ -92,12 +92,17 @@ def _evaluate_answer(
 
     try:
         response = _call_llm([{"role": "user", "content": prompt}])
-    except ConnectionError as e:
+    except Exception as e:
         logger.error("LLM call failed: %s", e)
         return _fallback_evaluation(answer_text)
 
     text = response["message"]["content"]
-    parsed = _parse_json(text)
+
+    try:
+        parsed = _parse_json(text)
+    except Exception as e:
+        logger.error("Failed to parse LLM evaluation JSON: %s", e)
+        return _fallback_evaluation(answer_text)
 
     if not parsed or not isinstance(parsed, dict):
         logger.warning("LLM returned unparseable evaluation, using fallback scores")

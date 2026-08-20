@@ -11,6 +11,7 @@ cfg = get_config()
 MODEL_NAME = cfg["llm"]["model"]
 MAX_RETRIES = cfg["llm"].get("max_retries", 3)
 RETRY_DELAY = cfg["llm"].get("retry_delay", 2)
+TIMEOUT = cfg["llm"].get("timeout", 60)
 PROVIDER = cfg["llm"].get("provider", "ollama")
 
 if PROVIDER != "ollama":
@@ -42,7 +43,8 @@ def _call_llm(messages):
         try:
             response = ollama.chat(
                 model=MODEL_NAME,
-                messages=messages
+                messages=messages,
+                timeout=TIMEOUT,
             )
             return response
         except ollama.ResponseError as e:
@@ -53,6 +55,11 @@ def _call_llm(messages):
         except (ConnectionError, TimeoutError, OSError) as e:
             last_error = e
             logger.error("Attempt %d/%d - Network/connection error: %s", attempt, MAX_RETRIES, e)
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAY * attempt)
+        except Exception as e:
+            last_error = e
+            logger.error("Attempt %d/%d - Unexpected error: %s", attempt, MAX_RETRIES, e)
             if attempt < MAX_RETRIES:
                 time.sleep(RETRY_DELAY * attempt)
 
