@@ -110,11 +110,37 @@ export interface AnswerResponse {
   answer_recorded: boolean;
   evaluation: {
     overall_score: number;
+    relevance?: number;
+    clarity?: number;
+    creativity?: number;
+    communication?: number;
     strengths: string[];
     weaknesses: string[];
     follow_up: string;
     [key: string]: unknown;
   };
+  has_next: boolean;
+  next_question: {
+    id: string;
+    topic: string;
+    difficulty: string;
+    question: string;
+    index: number;
+    total: number;
+  } | null;
+  follow_up?: string;
+  progress: string;
+}
+
+export interface FollowupResponse {
+  session_id: string;
+  followup_evaluation: {
+    score: number;
+    is_serious: boolean;
+    improved: boolean;
+    notes: string;
+  };
+  merged_score: number;
   has_next: boolean;
   next_question: {
     id: string;
@@ -149,15 +175,20 @@ export interface Report {
     strengths: string[];
     weaknesses: string[];
   }[];
+  timing?: {
+    total_answer_time: number;
+    total_eval_time: number;
+  };
 }
 
-export async function startInterview(domainSlug: string, questionCount: number, experienceLevel?: string) {
+export async function startInterview(domainSlug: string, questionCount: number, experienceLevel?: string, resumeData?: Record<string, unknown>) {
   return request<InterviewStartResponse>("/api/interviews/start", {
     method: "POST",
     body: JSON.stringify({
       domain_slug: domainSlug,
       question_count: questionCount,
       experience_level: experienceLevel || undefined,
+      resume_data: resumeData || undefined,
     }),
   });
 }
@@ -168,10 +199,24 @@ export async function getQuestion(sessionId: string) {
   );
 }
 
-export async function submitAnswer(sessionId: string, questionId: string, answerText: string) {
+export async function submitAnswer(sessionId: string, questionId: string, answerText: string, answerTimeSeconds?: number) {
   return request<AnswerResponse>(`/api/interviews/${sessionId}/answer`, {
     method: "POST",
-    body: JSON.stringify({ question_id: questionId, answer_text: answerText }),
+    body: JSON.stringify({
+      question_id: questionId,
+      answer_text: answerText,
+      answer_time_seconds: answerTimeSeconds,
+    }),
+  });
+}
+
+export async function submitFollowup(sessionId: string, answerText: string, answerTimeSeconds?: number) {
+  return request<FollowupResponse>(`/api/interviews/${sessionId}/followup`, {
+    method: "POST",
+    body: JSON.stringify({
+      answer_text: answerText,
+      answer_time_seconds: answerTimeSeconds,
+    }),
   });
 }
 
@@ -196,4 +241,43 @@ export async function getRecommendations(sessionId: string) {
   return request<{ recommendations: unknown[]; overall_score: number; verdict: string }>(
     `/api/analytics/recommendations/${sessionId}`
   );
+}
+
+// ── Resume ───────────────────────────────────────────────────────────────────
+
+export interface ResumeData {
+  filename: string;
+  name: string;
+  skills: string[];
+  skill_categories: string[];
+  experience_level: string;
+  years_experience: number | null;
+  job_titles: string[];
+  education: string[];
+  quality_score: number;
+  quality_breakdown: Record<string, number>;
+}
+
+export async function parseResume(file: File) {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE}/api/interviews/parse-resume`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+
+  return res.json() as Promise<ResumeData>;
 }
