@@ -316,7 +316,7 @@ def get_question_set(resume_data, question_count=None):
     use_llm = cfg_local["question_engine"]["use_llm_generation"]
 
     llm_questions = []
-    if use_llm:
+    if use_llm and resume_data and resume_data.get("experience_level"):
         llm_questions = generate_llm_questions(resume_data, count=count)
 
     bank_questions = select_questions(resume_data, question_count=count - len(llm_questions))
