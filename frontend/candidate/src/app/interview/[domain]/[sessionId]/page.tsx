@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import * as api from "@/lib/api";
+import QuestionCard from "@/components/QuestionCard";
 
 interface Question {
   id: string;
@@ -76,27 +77,25 @@ export default function InterviewPage() {
   };
 
   if (!question && !error) return <p>Loading question...</p>;
-  if (error) return <p style={{ color: "red" }}>{error}</p>;
+  if (error) return <p className="text-red-600">{error}</p>;
 
   return (
     <div>
-      <div style={{ marginBottom: "12px", color: "#666" }}>
-        [{question!.index}/{question!.total} | {question!.topic} | {question!.difficulty}]
-      </div>
-
-      <h2 style={{ fontSize: "1.1em" }}>{question!.question}</h2>
-
-      <textarea
-        value={answer}
-        onChange={(e) => setAnswer(e.target.value)}
-        placeholder="Type your answer here..."
-        rows={6}
-        disabled={submitting || done}
-        style={{ width: "100%", padding: "8px", marginTop: "12px", fontFamily: "monospace", resize: "vertical" }}
+      <QuestionCard
+        index={question!.index}
+        total={question!.total}
+        topic={question!.topic}
+        difficulty={question!.difficulty}
+        question={question!.question}
+        answer={answer}
+        onAnswerChange={setAnswer}
+        onSubmit={handleSubmit}
+        submitting={submitting}
+        disabled={done}
       />
 
       {feedback && (
-        <div style={{ marginTop: "12px", padding: "10px", border: "1px solid #ccc" }}>
+        <div className="mt-3 p-2.5 border border-gray-200">
           <p><strong>Score: {feedback.score}/100</strong></p>
           {feedback.strengths.length > 0 && (
             <p>Strengths: {feedback.strengths.join(", ")}</p>
@@ -108,19 +107,9 @@ export default function InterviewPage() {
       )}
 
       {done && (
-        <p style={{ marginTop: "12px", fontWeight: "bold" }}>
+        <p className="mt-3 font-bold">
           Interview complete! Redirecting to results...
         </p>
-      )}
-
-      {!feedback && !done && (
-        <button
-          onClick={handleSubmit}
-          disabled={!answer.trim() || submitting}
-          style={{ marginTop: "10px", padding: "8px 16px", cursor: "pointer" }}
-        >
-          {submitting ? "Evaluating..." : "Submit Answer"}
-        </button>
       )}
     </div>
   );

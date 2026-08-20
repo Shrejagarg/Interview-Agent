@@ -1,13 +1,20 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("auth_token");
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(body.detail || `HTTP ${res.status}`);
@@ -31,10 +38,9 @@ export async function login(email: string, password: string) {
   );
 }
 
-export async function getMe(token: string) {
+export async function getMe() {
   return request<{ user_id: string; email: string; role: string; full_name?: string }>(
-    "/api/auth/me",
-    { headers: { Authorization: `Bearer ${token}` } }
+    "/api/auth/me"
   );
 }
 

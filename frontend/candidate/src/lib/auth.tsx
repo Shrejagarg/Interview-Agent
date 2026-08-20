@@ -28,6 +28,15 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
 });
 
+function setCookie(name: string, value: string, days: number) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+}
+
+function removeCookie(name: string) {
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -38,10 +47,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (saved) {
       setToken(saved);
       api
-        .getMe(saved)
+        .getMe()
         .then((u) => setUser(u))
         .catch(() => {
           localStorage.removeItem("auth_token");
+          removeCookie("auth_token");
           setToken(null);
         })
         .finally(() => setLoading(false));
@@ -53,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginFn = async (email: string, password: string) => {
     const res = await api.login(email, password);
     localStorage.setItem("auth_token", res.access_token);
+    setCookie("auth_token", res.access_token, 7);
     setToken(res.access_token);
     setUser({ user_id: res.user_id, email: res.email, role: res.role });
   };
@@ -60,12 +71,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerFn = async (email: string, password: string, fullName?: string) => {
     const res = await api.register(email, password, fullName);
     localStorage.setItem("auth_token", res.access_token);
+    setCookie("auth_token", res.access_token, 7);
     setToken(res.access_token);
     setUser({ user_id: res.user_id, email: res.email, role: res.role });
   };
 
   const logout = () => {
     localStorage.removeItem("auth_token");
+    removeCookie("auth_token");
     setToken(null);
     setUser(null);
   };

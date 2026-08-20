@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import * as api from "@/lib/api";
+import DomainCard from "@/components/DomainCard";
 
 export default function Home() {
   const [domains, setDomains] = useState<api.Domain[]>([]);
@@ -15,22 +15,14 @@ export default function Home() {
   return (
     <div>
       <h1>Interview Agent</h1>
-      <p>AI-powered interview simulator. Pick a domain to start practicing.</p>
+      <p className="text-gray-600">AI-powered interview simulator. Pick a domain to start practicing.</p>
 
       {loading ? (
         <p>Loading domains...</p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "20px" }}>
+        <div className="flex flex-col gap-3 mt-5">
           {domains.map((d) => (
-            <Link
-              key={d.slug}
-              href={`/interview/${d.slug}`}
-              style={{ padding: "12px", border: "1px solid #ccc", textDecoration: "none", color: "#000" }}
-            >
-              <strong>{d.name}</strong>
-              <br />
-              <span style={{ fontSize: "0.9em", color: "#666" }}>{d.description}</span>
-            </Link>
+            <DomainCard key={d.slug} slug={d.slug} name={d.name} description={d.description} />
           ))}
         </div>
       )}
