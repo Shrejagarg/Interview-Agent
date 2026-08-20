@@ -44,7 +44,6 @@ def _call_llm(messages):
             response = ollama.chat(
                 model=MODEL_NAME,
                 messages=messages,
-                timeout=TIMEOUT,
             )
             return response
         except ollama.ResponseError as e:
