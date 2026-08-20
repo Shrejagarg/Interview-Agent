@@ -2,8 +2,10 @@
 
 # LLM Settings
 llm:
-  provider: "ollama"
-  model: "llama3"
+  provider: "gemini"
+  model: "gemini-flash-latest"
+  google_api_key: ""
+  ollama_model: "llama3"
   timeout: 60
   keep_alive: "10m"
   max_retries: 3
