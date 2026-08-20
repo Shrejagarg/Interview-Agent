@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.config import CORS_ORIGINS
-from backend.app.api import auth, domains, interviews, analytics
+from backend.app.api import auth, domains, interviews, analytics, company
 
 app = FastAPI(
     title="Interview Agent API",
@@ -27,6 +27,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(domains.router, prefix="/api/domains", tags=["Domains"])
 app.include_router(interviews.router, prefix="/api/interviews", tags=["Interviews"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
+app.include_router(company.router, prefix="/api/company", tags=["Company"])
 
 
 @app.get("/")

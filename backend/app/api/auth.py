@@ -93,6 +93,59 @@ async def get_current_user(authorization: str = Header(None)) -> UserProfile:
         raise HTTPException(status_code=401, detail="Token verification failed")
 
 
+async def get_optional_user(authorization: str = Header(None)) -> Optional[UserProfile]:
+    """Like get_current_user, but returns None instead of raising when no token."""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+
+    token = authorization.split(" ", 1)[1]
+
+    if not is_supabase_configured():
+        if ENV == "development":
+            return UserProfile(
+                user_id="dev-user-id",
+                email="dev@example.com",
+                role="candidate",
+            )
+        return None
+
+    try:
+        response = httpx.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers={
+                "apikey": SUPABASE_ANON_KEY,
+                "Authorization": f"Bearer {token}",
+            },
+        )
+        if response.status_code != 200:
+            return None
+
+        data = response.json()
+        return UserProfile(
+            user_id=data["id"],
+            email=data["email"],
+            role=data.get("app_metadata", {}).get("role", "candidate"),
+            full_name=data.get("user_metadata", {}).get("full_name"),
+        )
+    except Exception:
+        return None
+
+
+# ── Role-Based Access Control ─────────────────────────────────────────────────
+
+def require_role(role: str):
+    """Create a dependency that requires the user to have a specific role."""
+    async def _check(authorization: str = Header(None)):
+        user = await get_current_user(authorization)
+        if user.role != role:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Access denied. Required role: '{role}', your role: '{user.role}'",
+            )
+        return user
+    return _check
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=AuthResponse)

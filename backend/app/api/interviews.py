@@ -7,12 +7,13 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from backend.app.domains import get_registry
 from backend.app.domains.base import BaseDomain
 from backend.app.config import OLLAMA_HOST, MODEL_NAME
+from backend.app.api.auth import get_optional_user, UserProfile
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -216,7 +217,10 @@ def _compute_session_summary(session: Dict[str, Any], domain: BaseDomain) -> Dic
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/start")
-def start_interview(req: StartInterviewRequest):
+def start_interview(
+    req: StartInterviewRequest,
+    user: Optional[UserProfile] = Depends(get_optional_user),
+):
     """Start a new interview session."""
     registry = get_registry()
     domain = registry.get(req.domain_slug)
@@ -238,6 +242,8 @@ def start_interview(req: StartInterviewRequest):
         "started_at": datetime.now().isoformat(),
         "finished_at": None,
         "status": "in_progress",
+        "user_id": user.user_id if user else None,
+        "company_id": None,
     }
 
     first_q = selected[0] if selected else None
@@ -391,8 +397,12 @@ def get_report(session_id: str):
 
 
 @router.get("")
-def list_sessions():
-    """List all sessions."""
+def list_sessions(user: Optional[UserProfile] = Depends(get_optional_user)):
+    """List sessions — filters by user_id if authenticated."""
+    sessions = list(_sessions.values())
+    if user:
+        sessions = [s for s in sessions if s.get("user_id") == user.user_id]
+
     return {
         "sessions": [
             {
@@ -402,6 +412,6 @@ def list_sessions():
                 "started_at": s["started_at"],
                 "answers": len(s["answers"]),
             }
-            for s in _sessions.values()
+            for s in sessions
         ]
     }
