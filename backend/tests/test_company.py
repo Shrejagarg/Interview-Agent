@@ -14,17 +14,23 @@ from backend.app.api.auth import UserProfile
 AUTH_PATCH_TARGET = "backend.app.api.auth.get_current_user"
 
 
-def _mock_llm(prompt: str) -> str:
+def _mock_llm(messages):
     import json
-    return json.dumps({
-        "overall_score": 70,
-        "technical_knowledge": 65,
-        "communication": 75,
-        "strengths": ["Good structure"],
-        "weaknesses": ["Could be more specific"],
-        "follow_up": "",
-        "is_serious": True,
-    })
+    return {
+        "message": {
+            "content": json.dumps({
+                "relevance": 70,
+                "clarity": 65,
+                "creativity": 75,
+                "communication": 72,
+                "overall_score": 70,
+                "strengths": ["Good structure"],
+                "weaknesses": ["Could be more specific"],
+                "follow_up": "",
+                "is_serious": True,
+            })
+        }
+    }
 
 
 COMPANY_USER = UserProfile(

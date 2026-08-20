@@ -1,24 +1,29 @@
-"""Interview endpoints — start, answer, and complete interviews with LLM evaluation"""
+"""Interview endpoints — start, answer, and complete interviews with LLM evaluation
 
-import json
+Uses core/ package for evaluation logic (retry, weighted scoring, follow-ups).
+Backend-specific: multi-domain question selection, session management, resume upload.
+"""
+
 import random
 import logging
 import uuid
+import time
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from pydantic import BaseModel
 
 from backend.app.domains import get_registry
 from backend.app.domains.base import BaseDomain
-from backend.app.config import OLLAMA_HOST, MODEL_NAME
 from backend.app.api.auth import get_optional_user, UserProfile
+
+from core.evaluator import _call_llm, _parse_json, _compute_weighted_score
+from core.evaluator import evaluate_followup, merge
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# In-memory session store (will be replaced with Supabase)
 _sessions: Dict[str, Dict[str, Any]] = {}
 
 
@@ -27,19 +32,24 @@ _sessions: Dict[str, Dict[str, Any]] = {}
 class StartInterviewRequest(BaseModel):
     domain_slug: str
     question_count: int = 5
-    experience_level: Optional[str] = None  # fresher | mid | senior
+    experience_level: Optional[str] = None
     resume_data: Optional[Dict[str, Any]] = None
 
 
 class AnswerRequest(BaseModel):
     question_id: str
     answer_text: str
+    answer_time_seconds: Optional[float] = None
+
+
+class FollowupRequest(BaseModel):
+    answer_text: str
+    answer_time_seconds: Optional[float] = None
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _detect_experience_level(resume_data: Optional[Dict[str, Any]]) -> str:
-    """Infer experience level from resume data."""
     if not resume_data:
         return "mid"
     years = resume_data.get("years_experience", 0)
@@ -55,7 +65,6 @@ def _select_questions(
     count: int,
     experience_level: str,
 ) -> List[Dict[str, Any]]:
-    """Select questions using difficulty distribution and topic coverage."""
     all_questions = domain.get_questions()
     distribution = domain.get_difficulty_distribution(experience_level)
 
@@ -74,59 +83,27 @@ def _select_questions(
     return pool[:count]
 
 
-def _call_llm(prompt: str) -> Optional[str]:
-    """Send a prompt to Ollama and return the raw text response."""
-    try:
-        import ollama
-        response = ollama.chat(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response["message"]["content"]
-    except Exception as e:
-        logger.warning("LLM call failed: %s", e)
-        return None
-
-
-def _parse_llm_json(raw: str) -> Optional[Dict[str, Any]]:
-    """Extract a JSON object from LLM output (handles code fences, etc.)."""
-    if not raw:
-        return None
-    text = raw.strip()
-    if text.startswith("```"):
-        lines = text.split("\n")
-        lines = [l for l in lines if not l.strip().startswith("```")]
-        text = "\n".join(lines)
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        idx_start = text.find("{")
-        idx_end = text.rfind("}")
-        if idx_start != -1 and idx_end > idx_start:
-            try:
-                return json.loads(text[idx_start : idx_end + 1])
-            except json.JSONDecodeError:
-                pass
-    return None
-
-
 def _evaluate_answer(
     domain: BaseDomain,
     question_text: str,
     answer_text: str,
 ) -> Dict[str, Any]:
-    """Evaluate an answer using the LLM. Returns a dict with scores."""
     prompt = domain.get_evaluation_prompt(question_text, answer_text)
-    raw = _call_llm(prompt)
-    parsed = _parse_llm_json(raw)
+
+    try:
+        response = _call_llm([{"role": "user", "content": prompt}])
+    except ConnectionError as e:
+        logger.error("LLM call failed: %s", e)
+        return _fallback_evaluation(answer_text)
+
+    text = response["message"]["content"]
+    parsed = _parse_json(text)
 
     if not parsed or not isinstance(parsed, dict):
         logger.warning("LLM returned unparseable evaluation, using fallback scores")
         return _fallback_evaluation(answer_text)
 
-    defaults = {
-        dim: 50 for dim in domain.scoring_dimensions
-    }
+    defaults = {dim: 50 for dim in domain.scoring_dimensions}
     defaults.update({
         "overall_score": 50,
         "strengths": [],
@@ -140,13 +117,12 @@ def _evaluate_answer(
         val = defaults.get(dim, 50)
         defaults[dim] = max(0, min(100, int(val)))
 
-    defaults["overall_score"] = max(0, min(100, int(defaults["overall_score"])))
+    defaults["overall_score"] = _compute_weighted_score(defaults)
 
     return defaults
 
 
 def _fallback_evaluation(answer_text: str) -> Dict[str, Any]:
-    """Score when the LLM is unavailable — basic heuristic."""
     text = answer_text.strip().lower()
     if not text or len(text) < 10:
         return {
@@ -167,7 +143,6 @@ def _fallback_evaluation(answer_text: str) -> Dict[str, Any]:
 
 
 def _compute_session_summary(session: Dict[str, Any], domain: BaseDomain) -> Dict[str, Any]:
-    """Build the full report from accumulated answer evaluations."""
     answers = session["answers"]
     if not answers:
         return {
@@ -221,7 +196,6 @@ def start_interview(
     req: StartInterviewRequest,
     user: Optional[UserProfile] = Depends(get_optional_user),
 ):
-    """Start a new interview session."""
     registry = get_registry()
     domain = registry.get(req.domain_slug)
     if not domain:
@@ -244,6 +218,9 @@ def start_interview(
         "status": "in_progress",
         "user_id": user.user_id if user else None,
         "company_id": None,
+        "resume_data": req.resume_data,
+        "pending_followup": None,
+        "pending_evaluation": None,
     }
 
     first_q = selected[0] if selected else None
@@ -266,7 +243,6 @@ def start_interview(
 
 @router.get("/{session_id}/question")
 def get_current_question(session_id: str):
-    """Get the current question for a session."""
     session = _sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -293,13 +269,15 @@ def get_current_question(session_id: str):
 
 @router.post("/{session_id}/answer")
 def submit_answer(session_id: str, req: AnswerRequest):
-    """Submit an answer — LLM evaluation runs automatically."""
     session = _sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
     if session["status"] == "completed":
         raise HTTPException(status_code=400, detail="Interview already completed")
+
+    if session.get("pending_followup"):
+        raise HTTPException(status_code=422, detail="Must answer pending follow-up first")
 
     answer_text = req.answer_text.strip()
     if len(answer_text) < 5:
@@ -314,7 +292,9 @@ def submit_answer(session_id: str, req: AnswerRequest):
     registry = get_registry()
     domain = registry.get(session["domain_slug"])
 
+    eval_start = time.time()
     evaluation = _evaluate_answer(domain, q["question"], answer_text)
+    eval_time = round(time.time() - eval_start, 3)
 
     record = {
         "question_id": q["id"],
@@ -324,7 +304,26 @@ def submit_answer(session_id: str, req: AnswerRequest):
         "answer": answer_text,
         "evaluation": evaluation,
         "timestamp": datetime.now().isoformat(),
+        "timing": {
+            "answer_time_seconds": req.answer_time_seconds or 0,
+            "eval_time_seconds": eval_time,
+        },
     }
+
+    follow_up = evaluation.get("follow_up", "")
+    if follow_up:
+        session["pending_followup"] = follow_up
+        session["pending_evaluation"] = evaluation
+        session["pending_answer_record"] = record
+        return {
+            "session_id": session_id,
+            "answer_recorded": True,
+            "evaluation": evaluation,
+            "has_next": False,
+            "next_question": None,
+            "follow_up": follow_up,
+            "progress": f"{session['current_index'] + 1}/{len(session['questions'])}",
+        }
 
     session["answers"].append(record)
     session["current_index"] += 1
@@ -356,9 +355,73 @@ def submit_answer(session_id: str, req: AnswerRequest):
     }
 
 
+@router.post("/{session_id}/followup")
+def submit_followup(session_id: str, req: FollowupRequest):
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if not session.get("pending_followup"):
+        raise HTTPException(status_code=422, detail="No pending follow-up question")
+
+    answer_text = req.answer_text.strip()
+    if len(answer_text) < 5:
+        raise HTTPException(status_code=422, detail="Answer too short (minimum 5 characters)")
+
+    eval_start = time.time()
+    followup_eval = evaluate_followup(answer_text)
+    eval_time = round(time.time() - eval_start, 3)
+
+    main_eval = session["pending_evaluation"]
+    main_score = main_eval.get("overall_score", 0)
+    follow_score = followup_eval.get("score", 0)
+    merged_score = merge(main_score, follow_score)
+
+    record = session["pending_answer_record"]
+    record["evaluation"]["overall_score"] = merged_score
+    record["evaluation"]["follow_up"] = session["pending_followup"]
+    record["evaluation"]["follow_up_answer"] = answer_text
+    record["evaluation"]["follow_up_score"] = followup_eval
+    record["timing"]["followup_time_seconds"] = req.answer_time_seconds or 0
+    record["timing"]["followup_eval_time_seconds"] = eval_time
+
+    session["answers"].append(record)
+
+    session["pending_followup"] = None
+    session["pending_evaluation"] = None
+    session["pending_answer_record"] = None
+
+    session["current_index"] += 1
+
+    has_more = session["current_index"] < len(session["questions"])
+    next_q = None
+    if has_more:
+        nq = session["questions"][session["current_index"]]
+        next_q = {
+            "id": nq["id"],
+            "topic": nq["topic"],
+            "difficulty": nq["difficulty"],
+            "question": nq["question"],
+            "index": session["current_index"] + 1,
+            "total": len(session["questions"]),
+        }
+
+    if not has_more:
+        session["status"] = "completed"
+        session["finished_at"] = datetime.now().isoformat()
+
+    return {
+        "session_id": session_id,
+        "followup_evaluation": followup_eval,
+        "merged_score": merged_score,
+        "has_next": has_more,
+        "next_question": next_q,
+        "progress": f"{session['current_index']}/{len(session['questions'])}",
+    }
+
+
 @router.get("/{session_id}/report")
 def get_report(session_id: str):
-    """Get the full interview report with scores and recommendations."""
     session = _sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -379,6 +442,13 @@ def get_report(session_id: str):
             "weaknesses": a["evaluation"].get("weaknesses", []),
         })
 
+    total_answer_time = sum(
+        a.get("timing", {}).get("answer_time_seconds", 0) for a in session["answers"]
+    )
+    total_eval_time = sum(
+        a.get("timing", {}).get("eval_time_seconds", 0) for a in session["answers"]
+    )
+
     return {
         "session_id": session_id,
         "domain": session["domain_slug"],
@@ -393,12 +463,63 @@ def get_report(session_id: str):
         "verdict": summary["verdict"],
         "recommendations": summary["recommendations"],
         "answers": per_answer,
+        "timing": {
+            "total_answer_time": round(total_answer_time, 2),
+            "total_eval_time": round(total_eval_time, 2),
+        },
+    }
+
+
+@router.post("/parse-resume")
+async def parse_resume_upload(file: UploadFile = File(...)):
+    import os
+    import tempfile
+
+    suffix = os.path.splitext(file.filename or "")[1].lower()
+    if suffix not in (".pdf", ".docx", ".txt", ".doc"):
+        raise HTTPException(status_code=422, detail="Unsupported file format. Use PDF, DOCX, or TXT.")
+
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=422, detail="File too large (max 10MB)")
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        from core.resume_parser import parse_resume
+        result = parse_resume(tmp_path)
+    except Exception as e:
+        logger.error("Resume parsing failed: %s", e)
+        raise HTTPException(status_code=422, detail=f"Failed to parse resume: {e}")
+    finally:
+        os.unlink(tmp_path)
+
+    if result is None:
+        raise HTTPException(status_code=422, detail="Could not extract any text from resume")
+
+    skills_data = result.get("skills", {})
+    experience_data = result.get("experience", {})
+    quality_data = result.get("quality", {})
+    education_data = result.get("education", {})
+
+    return {
+        "filename": file.filename,
+        "name": result.get("name", ""),
+        "skills": skills_data.get("skills", []),
+        "skill_categories": skills_data.get("categories", []),
+        "experience_level": result.get("experience_level", "unknown"),
+        "years_experience": experience_data.get("years"),
+        "job_titles": experience_data.get("job_titles", []),
+        "education": education_data.get("entries", []),
+        "quality_score": quality_data.get("score", 0),
+        "quality_breakdown": quality_data.get("breakdown", {}),
     }
 
 
 @router.get("")
 def list_sessions(user: Optional[UserProfile] = Depends(get_optional_user)):
-    """List sessions — filters by user_id if authenticated."""
     sessions = list(_sessions.values())
     if user:
         sessions = [s for s in sessions if s.get("user_id") == user.user_id]

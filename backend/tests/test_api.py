@@ -11,18 +11,24 @@ from backend.app import app
 from backend.app.api.interviews import _sessions
 
 
-def _mock_llm(prompt: str) -> str:
+def _mock_llm(messages):
     """Return a plausible LLM evaluation JSON without calling Ollama."""
     import json
-    return json.dumps({
-        "overall_score": 70,
-        "technical_knowledge": 65,
-        "communication": 75,
-        "strengths": ["Good structure"],
-        "weaknesses": ["Could be more specific"],
-        "follow_up": "",
-        "is_serious": True,
-    })
+    return {
+        "message": {
+            "content": json.dumps({
+                "relevance": 70,
+                "clarity": 65,
+                "creativity": 75,
+                "communication": 72,
+                "overall_score": 70,
+                "strengths": ["Good structure"],
+                "weaknesses": ["Could be more specific"],
+                "follow_up": "",
+                "is_serious": True,
+            })
+        }
+    }
 
 
 client = TestClient(app)
@@ -312,3 +318,205 @@ class TestAnalyticsAPI:
 
     def test_recommendations_unknown_session(self):
         assert client.get("/api/analytics/recommendations/fake-id").status_code == 404
+
+
+# ── Follow-up Flow ────────────────────────────────────────────────────────────
+
+def _mock_llm_with_followup(messages):
+    """LLM mock that triggers a follow-up question."""
+    import json
+    return {
+        "message": {
+            "content": json.dumps({
+                "relevance": 70,
+                "clarity": 65,
+                "creativity": 75,
+                "communication": 72,
+                "overall_score": 70,
+                "strengths": ["Good structure"],
+                "weaknesses": ["Could be more specific"],
+                "follow_up": "Can you elaborate on the specific tools you use?",
+                "is_serious": True,
+            })
+        }
+    }
+
+
+def _mock_followup_eval(answer):
+    """Mock evaluate_followup response."""
+    return {
+        "score": 80,
+        "is_serious": True,
+        "improved": True,
+        "notes": "Good elaboration",
+    }
+
+
+class TestFollowupFlow:
+    def test_answer_triggers_followup(self):
+        """When LLM returns follow_up, session pauses and returns followup."""
+        _sessions.clear()
+        sid = _start_session("marketing", count=1)
+
+        with patch("backend.app.api.interviews._call_llm", side_effect=_mock_llm_with_followup):
+            q = client.get(f"/api/interviews/{sid}/question").json()
+            r = client.post(f"/api/interviews/{sid}/answer", json={
+                "question_id": q["id"],
+                "answer_text": "I use Google Analytics and SEMrush for tracking.",
+            })
+
+        assert r.status_code == 200
+        body = r.json()
+        assert body["follow_up"] == "Can you elaborate on the specific tools you use?"
+        assert body["has_next"] is False
+        assert body["next_question"] is None
+
+    def test_submit_followup_merges_score(self):
+        """Follow-up answer merges with main score using merge()."""
+        _sessions.clear()
+        sid = _start_session("marketing", count=1)
+
+        with patch("backend.app.api.interviews._call_llm", side_effect=_mock_llm_with_followup):
+            q = client.get(f"/api/interviews/{sid}/question").json()
+            client.post(f"/api/interviews/{sid}/answer", json={
+                "question_id": q["id"],
+                "answer_text": "I use Google Analytics for tracking.",
+            })
+
+        with patch("backend.app.api.interviews.evaluate_followup", side_effect=_mock_followup_eval):
+            r = client.post(f"/api/interviews/{sid}/followup", json={
+                "answer_text": "Specifically, I use GA4 with custom dashboards and SEMrush for keyword tracking.",
+            })
+
+        assert r.status_code == 200
+        body = r.json()
+        assert "merged_score" in body
+        assert body["merged_score"] > 0
+        assert body["followup_evaluation"]["score"] == 80
+
+    def test_followup_completes_session_when_last(self):
+        """Follow-up on last question marks session completed."""
+        _sessions.clear()
+        sid = _start_session("marketing", count=1)
+
+        with patch("backend.app.api.interviews._call_llm", side_effect=_mock_llm_with_followup):
+            q = client.get(f"/api/interviews/{sid}/question").json()
+            client.post(f"/api/interviews/{sid}/answer", json={
+                "question_id": q["id"],
+                "answer_text": "I use Google Analytics for tracking.",
+            })
+
+        with patch("backend.app.api.interviews.evaluate_followup", side_effect=_mock_followup_eval):
+            r = client.post(f"/api/interviews/{sid}/followup", json={
+                "answer_text": "GA4 with custom dashboards for detailed reporting.",
+            })
+
+        body = r.json()
+        assert body["has_next"] is False
+        session = _sessions[sid]
+        assert session["status"] == "completed"
+
+    def test_followup_without_pending_returns_error(self):
+        """Submitting followup when none pending returns 422."""
+        sid = _start_session("marketing", count=1)
+        r = client.post(f"/api/interviews/{sid}/followup", json={
+            "answer_text": "Some answer.",
+        })
+        assert r.status_code == 422
+
+    def test_followup_answer_too_short(self):
+        """Short followup answer returns 422."""
+        _sessions.clear()
+        sid = _start_session("marketing", count=1)
+
+        with patch("backend.app.api.interviews._call_llm", side_effect=_mock_llm_with_followup):
+            q = client.get(f"/api/interviews/{sid}/question").json()
+            client.post(f"/api/interviews/{sid}/answer", json={
+                "question_id": q["id"],
+                "answer_text": "I use Google Analytics for tracking.",
+            })
+
+        r = client.post(f"/api/interviews/{sid}/followup", json={
+            "answer_text": "No",
+        })
+        assert r.status_code == 422
+
+    def test_cannot_submit_main_answer_with_pending_followup(self):
+        """Cannot submit a new main answer while followup is pending."""
+        _sessions.clear()
+        sid = _start_session("marketing", count=2)
+
+        with patch("backend.app.api.interviews._call_llm", side_effect=_mock_llm_with_followup):
+            q = client.get(f"/api/interviews/{sid}/question").json()
+            client.post(f"/api/interviews/{sid}/answer", json={
+                "question_id": q["id"],
+                "answer_text": "I use Google Analytics for tracking.",
+            })
+
+        q2 = client.get(f"/api/interviews/{sid}/question").json()
+        r = client.post(f"/api/interviews/{sid}/answer", json={
+            "question_id": q2["id"],
+            "answer_text": "This is a valid answer for the second question.",
+        })
+        assert r.status_code == 422
+
+    def test_report_includes_timing(self):
+        """Report endpoint includes timing data."""
+        _sessions.clear()
+        sid = _start_session("marketing", count=1)
+        q = client.get(f"/api/interviews/{sid}/question").json()
+        client.post(f"/api/interviews/{sid}/answer", json={
+            "question_id": q["id"],
+            "answer_text": "A comprehensive SEO strategy includes technical and content elements.",
+            "answer_time_seconds": 30.5,
+        })
+        r = client.get(f"/api/interviews/{sid}/report").json()
+        assert "timing" in r
+        assert "total_answer_time" in r["timing"]
+        assert "total_eval_time" in r["timing"]
+
+
+# ── Resume Upload ─────────────────────────────────────────────────────────────
+
+class TestResumeUpload:
+    def test_parse_resume_txt(self):
+        """Upload a TXT resume and get parsed data back."""
+        import io
+        content = b"""John Smith
+john.smith@email.com | 555-1234
+
+Skills: SEO, Google Analytics, Content Marketing, Social Media
+
+Experience:
+Marketing Manager at TechCorp (2020-2023)
+- Led SEO campaigns increasing organic traffic by 150%
+- Managed Google Ads budget of $50K/month
+
+Education:
+B.S. Marketing, State University (2016-2020)
+"""
+        r = client.post("/api/interviews/parse-resume", files={
+            "file": ("resume.txt", io.BytesIO(content), "text/plain")
+        })
+        assert r.status_code == 200
+        body = r.json()
+        assert body["name"] == "John Smith"
+        assert len(body["skills"]) > 0
+        assert body["quality_score"] >= 0
+        assert body["experience_level"] in ["fresher", "mid", "senior", "unknown"]
+
+    def test_parse_resume_unsupported_format(self):
+        """Upload unsupported file type returns 422."""
+        import io
+        r = client.post("/api/interviews/parse-resume", files={
+            "file": ("resume.exe", io.BytesIO(b"binary"), "application/octet-stream")
+        })
+        assert r.status_code == 422
+
+    def test_parse_resume_empty_txt(self):
+        """Upload empty TXT resume returns error or low quality."""
+        import io
+        r = client.post("/api/interviews/parse-resume", files={
+            "file": ("empty.txt", io.BytesIO(b""), "text/plain")
+        })
+        assert r.status_code in [200, 422]
