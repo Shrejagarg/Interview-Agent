@@ -3,7 +3,7 @@ import json
 import re
 import time
 import logging
-from config import get_config
+from .config import get_config
 
 logger = logging.getLogger(__name__)
 

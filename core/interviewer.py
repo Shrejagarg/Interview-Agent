@@ -1,9 +1,9 @@
 import time
 import logging
-from evaluator import evaluate_main, evaluate_followup, merge
-from state import update_topic_score, add_warning, add_seriousness_flag, record_answer
-from question_engine import get_question_set
-from config import get_config
+from .evaluator import evaluate_main, evaluate_followup, merge
+from .state import update_topic_score, add_warning, add_seriousness_flag, record_answer
+from .question_engine import get_question_set
+from .config import get_config
 
 logger = logging.getLogger(__name__)
 cfg = get_config()
@@ -211,7 +211,7 @@ def run_interview(state, resume_data=None):
         _print_feedback(main_eval, follow_score, final_score, show_feedback, show_score)
         logger.info("-" * 50)
 
-    from state import get_average, finalize_topics, export_session
+    from .state import get_average, finalize_topics, export_session
     finalize_topics(state)
     avg = get_average(state)
     state["_avg"] = avg

@@ -73,9 +73,10 @@ def export_session(state):
     state["total_time_seconds"] = round((finished - started).total_seconds(), 2)
 
     filename = f"session_{state['session_id']}.json"
-    filepath = os.path.join(os.path.dirname(__file__), "sessions", filename)
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    filepath = os.path.join(project_root, "sessions", filename)
 
-    os.makedirs(os.path.join(os.path.dirname(__file__), "sessions"), exist_ok=True)
+    os.makedirs(os.path.join(project_root, "sessions"), exist_ok=True)
 
     with open(filepath, "w") as f:
         json.dump(state, f, indent=2)

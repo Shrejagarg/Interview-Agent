@@ -3,12 +3,12 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 import pytest
-from resume_parser import (
+from core import (
     extract_text, extract_contact, extract_name, extract_skills,
     extract_experience, extract_education, detect_experience_level,
-    score_resume_quality, parse_resume
+    score_resume_quality, parse_resume,
+    ALL_SKILLS, MARKETING_SKILLS
 )
-from skills_database import ALL_SKILLS, MARKETING_SKILLS
 
 SAMPLE_DIR = os.path.join(os.path.dirname(__file__), "test_resumes")
 
@@ -241,7 +241,7 @@ class TestSkillsDatabase:
         assert len(ALL_SKILLS) > 0
 
     def test_skill_categories_populated(self):
-        from skills_database import SKILL_CATEGORIES
+        from core.skills_database import SKILL_CATEGORIES
         assert len(SKILL_CATEGORIES) > 0
 
     def test_marketing_skills_structure(self):

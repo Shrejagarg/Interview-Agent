@@ -1,5 +1,5 @@
-from state import finalize_topics, get_average, export_session
-from config import get_config
+from .state import finalize_topics, get_average, export_session
+from .config import get_config
 from collections import Counter
 import logging
 

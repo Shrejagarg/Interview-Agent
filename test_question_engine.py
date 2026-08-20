@@ -2,8 +2,8 @@ import pytest
 import os
 import json
 from unittest.mock import patch, MagicMock
-from question_bank import QUESTION_BANK, TOPICS, DIFFICULTY_LEVELS
-from question_engine import (
+from core import (
+    QUESTION_BANK, TOPICS, DIFFICULTY_LEVELS,
     filter_by_role,
     filter_by_difficulty,
     filter_unasked,
@@ -247,7 +247,7 @@ class TestSelectQuestions:
 
 
 class TestGetQuestionSet:
-    @patch("question_engine.generate_llm_questions", return_value=[])
+    @patch("core.question_engine.generate_llm_questions", return_value=[])
     def test_returns_structure(self, mock_llm):
         if os.path.exists(ANTI_REPEAT_FILE):
             os.remove(ANTI_REPEAT_FILE)
@@ -264,7 +264,7 @@ class TestGetQuestionSet:
         assert "topics_covered" in result
         assert result["count"] == 3
 
-    @patch("question_engine.generate_llm_questions", return_value=[])
+    @patch("core.question_engine.generate_llm_questions", return_value=[])
     def test_records_asked_ids(self, mock_llm):
         if os.path.exists(ANTI_REPEAT_FILE):
             os.remove(ANTI_REPEAT_FILE)
@@ -279,7 +279,7 @@ class TestGetQuestionSet:
         for q in result["questions"]:
             assert q["id"] in history
 
-    @patch("question_engine.generate_llm_questions", return_value=[])
+    @patch("core.question_engine.generate_llm_questions", return_value=[])
     def test_no_llm_fallback(self, mock_llm):
         if os.path.exists(ANTI_REPEAT_FILE):
             os.remove(ANTI_REPEAT_FILE)

@@ -1,8 +1,11 @@
 import pytest
 import os
 from unittest.mock import patch, MagicMock
-from interviewer import validate_answer, _print_feedback, _print_progress, _handle_answer_skip, _handle_evaluation_error, _handle_followup, _print_verdict
-from state import create_interview_state
+from core import (
+    validate_answer, _print_feedback, _print_progress,
+    _handle_answer_skip, _handle_evaluation_error, _handle_followup, _print_verdict,
+    create_interview_state
+)
 
 
 class TestValidateAnswer:
@@ -93,7 +96,7 @@ class TestHandleFollowup:
         assert score is None
         assert interrupted is False
 
-    @patch("interviewer.evaluate_followup")
+    @patch("core.interviewer.evaluate_followup")
     @patch("builtins.input", return_value="I would approach this by analyzing data")
     def test_with_followup(self, mock_input, mock_follow_eval):
         mock_follow_eval.return_value = {
@@ -122,9 +125,9 @@ class TestPrintVerdict:
 
 
 class TestRunInterviewIntegration:
-    @patch("interviewer.get_question_set")
-    @patch("interviewer.evaluate_followup")
-    @patch("interviewer.evaluate_main")
+    @patch("core.interviewer.get_question_set")
+    @patch("core.interviewer.evaluate_followup")
+    @patch("core.interviewer.evaluate_main")
     @patch("builtins.input", return_value="SEO is search engine optimization used to rank higher on Google")
     def test_runs_full_interview(self, mock_input, mock_eval, mock_follow, mock_qs):
         mock_qs.return_value = {
@@ -147,13 +150,13 @@ class TestRunInterviewIntegration:
             "is_serious": True
         }
         state = create_interview_state()
-        from interviewer import run_interview
+        from core import run_interview
         result = run_interview(state)
         assert len(result["answers"]) == 1
         assert "verdict" in result
         assert result["verdict"] in ("Strong", "Average", "Needs Improvement")
 
-    @patch("interviewer.get_question_set")
+    @patch("core.interviewer.get_question_set")
     @patch("builtins.input", side_effect=KeyboardInterrupt)
     def test_ctrl_c_saves_partial(self, mock_input, mock_qs):
         mock_qs.return_value = {
@@ -169,12 +172,12 @@ class TestRunInterviewIntegration:
             "template_filled": 0
         }
         state = create_interview_state()
-        from interviewer import run_interview
+        from core import run_interview
         result = run_interview(state)
         assert len(result["answers"]) == 0
         assert result["verdict"] in ("Strong", "Average", "Needs Improvement")
 
-    @patch("interviewer.get_question_set")
+    @patch("core.interviewer.get_question_set")
     @patch("builtins.input", return_value="no")
     def test_short_answer_skipped(self, mock_input, mock_qs):
         mock_qs.return_value = {
@@ -189,14 +192,14 @@ class TestRunInterviewIntegration:
             "template_filled": 0
         }
         state = create_interview_state()
-        from interviewer import run_interview
+        from core import run_interview
         result = run_interview(state)
         assert len(result["answers"]) == 1
         assert result["answers"][0]["evaluation"]["_skipped"] is True
 
-    @patch("interviewer.get_question_set")
-    @patch("interviewer.evaluate_followup")
-    @patch("interviewer.evaluate_main")
+    @patch("core.interviewer.get_question_set")
+    @patch("core.interviewer.evaluate_followup")
+    @patch("core.interviewer.evaluate_main")
     @patch("builtins.input", return_value="This is a comprehensive marketing answer with SEO strategy details")
     def test_valid_answer_evaluated(self, mock_input, mock_eval, mock_follow, mock_qs):
         mock_qs.return_value = {
@@ -219,7 +222,7 @@ class TestRunInterviewIntegration:
             "is_serious": True
         }
         state = create_interview_state()
-        from interviewer import run_interview
+        from core import run_interview
         result = run_interview(state)
         assert len(result["answers"]) == 1
         assert result["answers"][0]["evaluation"]["overall_score"] == 6.8

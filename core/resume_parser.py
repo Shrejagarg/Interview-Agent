@@ -1,8 +1,8 @@
 import os
 import re
 import logging
-from config import get_config
-from skills_database import ALL_SKILLS, SKILL_CATEGORIES, MARKETING_SKILLS
+from .config import get_config
+from .skills_database import ALL_SKILLS, SKILL_CATEGORIES, MARKETING_SKILLS
 
 logger = logging.getLogger(__name__)
 cfg = get_config()

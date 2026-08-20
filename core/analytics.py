@@ -3,13 +3,14 @@ import os
 import logging
 from datetime import datetime
 from collections import defaultdict, Counter
-from config import get_config
-from skills_database import SKILL_CATEGORIES, MARKETING_SKILLS
+from .config import get_config
+from .skills_database import SKILL_CATEGORIES, MARKETING_SKILLS
 
 logger = logging.getLogger(__name__)
 cfg = get_config()
 
-SESSIONS_DIR = os.path.join(os.path.dirname(__file__), "sessions")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SESSIONS_DIR = os.path.join(PROJECT_ROOT, "sessions")
 
 
 def load_session(filepath):

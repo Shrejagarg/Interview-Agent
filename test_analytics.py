@@ -4,7 +4,7 @@ import json
 import tempfile
 import shutil
 from unittest.mock import patch
-from analytics import (
+from core import (
     load_session,
     load_all_sessions,
     get_session_summary,
@@ -17,8 +17,8 @@ from analytics import (
     export_structured_summary,
     compare_candidates,
     SESSIONS_DIR,
+    create_interview_state
 )
-from state import create_interview_state
 
 
 def _make_session(session_id="test_001", topic_scores=None, answers=None, avg=6.0, verdict="Average"):
@@ -86,12 +86,12 @@ class TestGetSessionSummary:
 
 
 class TestCompareSessions:
-    @patch("analytics.load_all_sessions", return_value=[])
+    @patch("core.analytics.load_all_sessions", return_value=[])
     def test_needs_two_sessions(self, mock_load):
         result = compare_sessions()
         assert "error" in result
 
-    @patch("analytics.load_all_sessions")
+    @patch("core.analytics.load_all_sessions")
     def test_with_sessions(self, mock_load):
         s1 = _make_session("s1", {"seo": 5.0, "branding": 4.0}, avg=4.5, verdict="Average")
         s2 = _make_session("s2", {"seo": 7.0, "branding": 6.0}, avg=6.5, verdict="Average")
@@ -101,7 +101,7 @@ class TestCompareSessions:
         assert result["overall_trend"] == "improving"
         assert "topic_trends" in result
 
-    @patch("analytics.load_all_sessions")
+    @patch("core.analytics.load_all_sessions")
     def test_declining_trend(self, mock_load):
         s1 = _make_session("s1", {"seo": 8.0}, avg=8.0, verdict="Strong")
         s2 = _make_session("s2", {"seo": 5.0}, avg=5.0, verdict="Average")
@@ -109,7 +109,7 @@ class TestCompareSessions:
         result = compare_sessions()
         assert result["overall_trend"] == "declining"
 
-    @patch("analytics.load_all_sessions")
+    @patch("core.analytics.load_all_sessions")
     def test_stable_trend(self, mock_load):
         s1 = _make_session("s1", {"seo": 6.0}, avg=6.0, verdict="Average")
         s2 = _make_session("s2", {"seo": 6.0}, avg=6.0, verdict="Average")

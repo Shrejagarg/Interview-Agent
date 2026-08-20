@@ -3,14 +3,14 @@ import os
 sys.path.insert(0, os.path.dirname(__file__))
 
 import pytest
-from config import load_config, get_config, DEFAULT_CONFIG
-from state import (
+from core import (
+    load_config, get_config, DEFAULT_CONFIG,
     create_interview_state, record_answer, update_topic_score,
     add_warning, add_seriousness_flag, finalize_topics,
-    get_average, export_session
+    get_average, export_session,
+    _parse_json, _compute_weighted_score, merge,
+    validate_answer
 )
-from evaluator import _parse_json, _compute_weighted_score, merge
-from interviewer import validate_answer
 from questions import MARKETING_QUESTIONS
 import json
 import tempfile
@@ -36,42 +36,42 @@ class TestConfig:
         assert abs(total - 1.0) < 0.01
 
     def test_load_config_with_missing_file(self, tmp_path):
-        import config
-        original = config.CONFIG_PATH
-        config.CONFIG_PATH = str(tmp_path / "nonexistent.yaml")
+        import core.config as config_module
+        original = config_module.CONFIG_PATH
+        config_module.CONFIG_PATH = str(tmp_path / "nonexistent.yaml")
         result = load_config()
-        config.CONFIG_PATH = original
+        config_module.CONFIG_PATH = original
         assert result == DEFAULT_CONFIG
 
     def test_load_config_with_malformed_yaml(self, tmp_path):
-        import config
-        original = config.CONFIG_PATH
+        import core.config as config_module
+        original = config_module.CONFIG_PATH
         bad_file = tmp_path / "bad.yaml"
         bad_file.write_text(": : : invalid yaml {{{}}")
-        config.CONFIG_PATH = str(bad_file)
+        config_module.CONFIG_PATH = str(bad_file)
         result = load_config()
-        config.CONFIG_PATH = original
+        config_module.CONFIG_PATH = original
         assert result == DEFAULT_CONFIG
 
     def test_load_config_with_valid_yaml(self, tmp_path):
-        import config
-        original = config.CONFIG_PATH
+        import core.config as config_module
+        original = config_module.CONFIG_PATH
         good_file = tmp_path / "good.yaml"
         good_file.write_text("llm:\n  model: testmodel\n")
-        config.CONFIG_PATH = str(good_file)
+        config_module.CONFIG_PATH = str(good_file)
         result = load_config()
-        config.CONFIG_PATH = original
+        config_module.CONFIG_PATH = original
         assert result["llm"]["model"] == "testmodel"
         assert result["scoring"] == DEFAULT_CONFIG["scoring"]
 
     def test_load_config_fills_missing_keys(self, tmp_path):
-        import config
-        original = config.CONFIG_PATH
+        import core.config as config_module
+        original = config_module.CONFIG_PATH
         partial_file = tmp_path / "partial.yaml"
         partial_file.write_text("llm:\n  model: test\n")
-        config.CONFIG_PATH = str(partial_file)
+        config_module.CONFIG_PATH = str(partial_file)
         result = load_config()
-        config.CONFIG_PATH = original
+        config_module.CONFIG_PATH = original
         assert result["llm"]["model"] == "test"
         assert result["llm"]["timeout"] == DEFAULT_CONFIG["llm"]["timeout"]
 
@@ -149,8 +149,8 @@ class TestState:
         assert get_average(state) == 0
 
     def test_export_session(self, tmp_path):
-        import state
-        original_dir = os.path.dirname(state.__file__)
+        import core.state as state_module
+        original_dir = os.path.dirname(os.path.dirname(state_module.__file__))
         sessions_dir = os.path.join(original_dir, "sessions")
 
         state = create_interview_state()

@@ -2,13 +2,14 @@ import random
 import json
 import os
 import logging
-from config import get_config
-from question_bank import QUESTION_BANK
+from .config import get_config
+from .question_bank import QUESTION_BANK
 
 logger = logging.getLogger(__name__)
 cfg = get_config()
 
-ANTI_REPEAT_FILE = os.path.join(os.path.dirname(__file__), ".asked_questions.json")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ANTI_REPEAT_FILE = os.path.join(PROJECT_ROOT, ".asked_questions.json")
 
 QUESTION_TEMPLATES = [
     {
@@ -228,7 +229,7 @@ def select_questions(resume_data, question_count=None):
 
 
 def generate_llm_questions(resume_data, count=5):
-    from evaluator import _call_llm
+    from .evaluator import _call_llm
 
     skills = resume_data.get("skills", {}).get("skills", [])[:5]
     categories = resume_data.get("skills", {}).get("categories", [])[:3]
