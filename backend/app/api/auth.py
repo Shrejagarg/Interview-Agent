@@ -1,7 +1,9 @@
-"""Authentication endpoints — Supabase Auth integration with JWT verification"""
+"""Authentication endpoints — Supabase Auth with dev-mode mock fallback"""
 
 import logging
-from typing import Optional
+import uuid
+import hashlib
+from typing import Optional, Dict
 
 import httpx
 from fastapi import APIRouter, HTTPException, Depends, Header
@@ -16,6 +18,54 @@ from backend.app.config import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+# ── Dev-mode in-memory user store ────────────────────────────────────────────
+
+_dev_users: Dict[str, Dict[str, str]] = {}  # email -> {user_id, email, password_hash, role, full_name}
+
+
+def _hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def _dev_create_user(email: str, password: str, role: str, full_name: Optional[str] = None) -> Dict[str, str]:
+    user_id = str(uuid.uuid4())
+    user = {
+        "user_id": user_id,
+        "email": email,
+        "password_hash": _hash_password(password),
+        "role": role,
+        "full_name": full_name or "",
+    }
+    _dev_users[email] = user
+    return user
+
+
+def _dev_find_user(email: str) -> Optional[Dict[str, str]]:
+    return _dev_users.get(email)
+
+
+def _dev_verify_password(email: str, password: str) -> bool:
+    user = _dev_users.get(email)
+    if not user:
+        return False
+    return user["password_hash"] == _hash_password(password)
+
+
+def _dev_make_token(user_id: str) -> str:
+    return f"dev-token-{user_id}"
+
+
+def _dev_parse_token(token: str) -> Optional[str]:
+    if token.startswith("dev-token-"):
+        return token[len("dev-token-"):]
+    return None
+
+
+# Seed a demo user on import
+_dev_create_user("demo@candidate.com", "demo123", "candidate", "Demo Candidate")
+_dev_create_user("demo@company.com", "demo123", "company", "Demo Company")
 
 
 # ── Models ────────────────────────────────────────────────────────────────────
@@ -50,10 +100,6 @@ class UserProfile(BaseModel):
 # ── JWT Dependency ────────────────────────────────────────────────────────────
 
 async def get_current_user(authorization: str = Header(None)) -> UserProfile:
-    """Verify the Supabase JWT and return the user profile.
-
-    Falls back to a dev-mode bypass when Supabase is not configured.
-    """
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or malformed Authorization header")
 
@@ -61,6 +107,16 @@ async def get_current_user(authorization: str = Header(None)) -> UserProfile:
 
     if not is_supabase_configured():
         if ENV == "development":
+            user_id = _dev_parse_token(token)
+            if user_id:
+                for u in _dev_users.values():
+                    if u["user_id"] == user_id:
+                        return UserProfile(
+                            user_id=u["user_id"],
+                            email=u["email"],
+                            role=u["role"],
+                            full_name=u["full_name"],
+                        )
             return UserProfile(
                 user_id="dev-user-id",
                 email="dev@example.com",
@@ -94,7 +150,6 @@ async def get_current_user(authorization: str = Header(None)) -> UserProfile:
 
 
 async def get_optional_user(authorization: str = Header(None)) -> Optional[UserProfile]:
-    """Like get_current_user, but returns None instead of raising when no token."""
     if not authorization or not authorization.startswith("Bearer "):
         return None
 
@@ -102,6 +157,16 @@ async def get_optional_user(authorization: str = Header(None)) -> Optional[UserP
 
     if not is_supabase_configured():
         if ENV == "development":
+            user_id = _dev_parse_token(token)
+            if user_id:
+                for u in _dev_users.values():
+                    if u["user_id"] == user_id:
+                        return UserProfile(
+                            user_id=u["user_id"],
+                            email=u["email"],
+                            role=u["role"],
+                            full_name=u["full_name"],
+                        )
             return UserProfile(
                 user_id="dev-user-id",
                 email="dev@example.com",
@@ -134,7 +199,6 @@ async def get_optional_user(authorization: str = Header(None)) -> Optional[UserP
 # ── Role-Based Access Control ─────────────────────────────────────────────────
 
 def require_role(role: str):
-    """Create a dependency that requires the user to have a specific role."""
     async def _check(authorization: str = Header(None)):
         user = await get_current_user(authorization)
         if user.role != role:
@@ -150,11 +214,21 @@ def require_role(role: str):
 
 @router.post("/register", response_model=AuthResponse)
 def register(req: RegisterRequest):
-    """Register a new user via Supabase Auth."""
     if req.role not in ("candidate", "company"):
         raise HTTPException(status_code=422, detail="role must be 'candidate' or 'company'")
 
     if not is_supabase_configured():
+        if ENV == "development":
+            if _dev_find_user(req.email):
+                raise HTTPException(status_code=409, detail="Email already registered")
+            user = _dev_create_user(req.email, req.password, req.role, req.full_name)
+            token = _dev_make_token(user["user_id"])
+            return AuthResponse(
+                access_token=token,
+                user_id=user["user_id"],
+                email=user["email"],
+                role=user["role"],
+            )
         raise HTTPException(
             status_code=503,
             detail="Supabase not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY.",
@@ -194,8 +268,18 @@ def register(req: RegisterRequest):
 
 @router.post("/login", response_model=AuthResponse)
 def login(req: LoginRequest):
-    """Login via Supabase Auth."""
     if not is_supabase_configured():
+        if ENV == "development":
+            if not _dev_verify_password(req.email, req.password):
+                raise HTTPException(status_code=401, detail="Invalid email or password")
+            user = _dev_find_user(req.email)
+            token = _dev_make_token(user["user_id"])
+            return AuthResponse(
+                access_token=token,
+                user_id=user["user_id"],
+                email=user["email"],
+                role=user["role"],
+            )
         raise HTTPException(
             status_code=503,
             detail="Supabase not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY.",
@@ -234,5 +318,4 @@ def login(req: LoginRequest):
 
 @router.get("/me", response_model=UserProfile)
 async def get_me(user: UserProfile = Depends(get_current_user)):
-    """Get the currently authenticated user's profile."""
     return user

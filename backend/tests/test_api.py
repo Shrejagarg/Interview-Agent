@@ -251,7 +251,11 @@ class TestAuthAPI:
             "password": "pass12345",
             "role": "candidate",
         })
-        assert r.status_code == 503
+        assert r.status_code == 200
+        body = r.json()
+        assert body["email"] == "test@example.com"
+        assert body["role"] == "candidate"
+        assert "access_token" in body
 
     def test_register_invalid_role(self):
         r = client.post("/api/auth/register", json={
