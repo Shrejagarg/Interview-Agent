@@ -59,7 +59,7 @@ resume:
 
 # Question Engine
 question_engine:
-  use_llm_generation: true
+  use_llm_generation: false
   randomize_order: true
   anti_repeat_window: 50
   topic_coverage_weight: 0.3
