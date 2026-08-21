@@ -3,8 +3,8 @@
 # LLM Settings
 llm:
   provider: "gemini"
-  model: "gemini-flash-latest"
-  google_api_key: ""
+  model: "gemini-3.6-flash"
+  google_api_key: "REDACTED"
   ollama_model: "llama3"
   timeout: 60
   keep_alive: "10m"

@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 cfg = get_config()
 PROVIDER = cfg["llm"].get("provider", "ollama")
-MODEL_NAME = cfg["llm"].get("model", "gemini-flash-latest") if PROVIDER == "gemini" else cfg["llm"].get("model", "llama3")
+MODEL_NAME = cfg["llm"].get("model", "gemini-3.6-flash") if PROVIDER == "gemini" else cfg["llm"].get("model", "llama3")
 OLLAMA_MODEL = cfg["llm"].get("ollama_model", "llama3")
 MAX_RETRIES = cfg["llm"].get("max_retries", 3)
 RETRY_DELAY = cfg["llm"].get("retry_delay", 2)
