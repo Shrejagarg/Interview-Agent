@@ -3,6 +3,7 @@ from core import (
     run_interview, generate_report,
     create_interview_state, parse_resume, get_config
 )
+from core.domain_bridge import list_available_domains
 import logging
 import sys
 import os
@@ -79,7 +80,7 @@ def main():
     logger = logging.getLogger(__name__)
 
     if not check_health():
-        logger.error("Ollama server is not running. Start it with: ollama serve")
+        logger.error("LLM backend is not available. Check your provider settings and API key in config.yaml")
         raise SystemExit(1)
 
     if not check_model():
@@ -91,10 +92,27 @@ def main():
     warm_up()
     logger.info("Ready!\n")
 
+    domains = list_available_domains()
+    if len(domains) == 1:
+        domain_slug = "marketing"
+        logger.info("Domain: Marketing")
+    else:
+        logger.info("Available domains:")
+        for i, d in enumerate(domains):
+            logger.info("  [%d] %s — %s", i + 1, d["name"], d["description"])
+
+        choice = input("\nSelect domain (number): ").strip()
+        try:
+            domain_slug = domains[int(choice) - 1]["slug"]
+        except (ValueError, IndexError):
+            domain_slug = "marketing"
+            logger.info("Invalid choice, defaulting to Marketing")
+        logger.info("Domain: %s\n", domain_slug)
+
     resume_data = prompt_resume()
 
-    state = create_interview_state()
-    state = run_interview(state, resume_data=resume_data)
+    state = create_interview_state(domain_slug=domain_slug)
+    state = run_interview(state, resume_data=resume_data, domain_slug=domain_slug)
 
     logger.info("\nGenerating full report...\n")
     generate_report(state)

@@ -126,7 +126,7 @@ class TestSkillGapAnalysis:
             "quality": {"score": 75}
         }
         answers = [
-            {"topic": "seo", "evaluation": {"overall_score": 4.0, "strengths": [], "weaknesses": []}},
+            {"topic": "seo", "evaluation": {"overall_score": 2.0, "strengths": [], "weaknesses": []}},
             {"topic": "analytics", "evaluation": {"overall_score": 8.0, "strengths": [], "weaknesses": []}},
         ]
         session = _make_session(answers=answers, topic_scores={"seo": 4.0, "analytics": 8.0})

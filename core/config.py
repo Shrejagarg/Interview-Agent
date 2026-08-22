@@ -37,7 +37,13 @@ DEFAULT_CONFIG = {
         "min_answer_length": 5,
         "question_count": 5,
         "show_feedback": True,
-        "show_score_after_answer": True
+        "show_score_after_answer": True,
+        "use_context_window": True,
+        "context_window_size": 2,
+        "prescreening_enabled": True,
+        "prescreening_min_content_words": 8,
+        "followup_min_score": 3.0,
+        "followup_max_score": 8.5,
     },
     "verdicts": {
         "strong_threshold": 7,
@@ -67,12 +73,22 @@ DEFAULT_CONFIG = {
         "randomize_order": True,
         "anti_repeat_window": 50,
         "topic_coverage_weight": 0.3,
+        "adaptive_difficulty": True,
+        "adaptive_window_size": 2,
+        "escalate_threshold": 7.5,
+        "deescalate_threshold": 3.5,
+        "max_per_topic": 1,
         "difficulty_distribution": {
             "fresher": {"easy": 0.7, "medium": 0.3, "hard": 0.0},
             "mid": {"easy": 0.2, "medium": 0.6, "hard": 0.2},
             "senior": {"easy": 0.0, "medium": 0.4, "hard": 0.6},
             "unknown": {"easy": 0.3, "medium": 0.5, "hard": 0.2}
         }
+    },
+    "persona": {
+        "style": "balanced",
+        "company_context": "",
+        "role_context": "",
     },
     "logging": {
         "level": "INFO"

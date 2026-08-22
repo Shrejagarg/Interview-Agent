@@ -2,6 +2,8 @@ import random
 import json
 import os
 import logging
+import string
+from collections import deque
 from .config import get_config
 from .question_bank import QUESTION_BANK
 
@@ -10,6 +12,25 @@ cfg = get_config()
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANTI_REPEAT_FILE = os.path.join(PROJECT_ROOT, ".asked_questions.json")
+
+DEDUP_STOPWORDS = {
+    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+    "have", "has", "had", "do", "does", "did", "will", "would", "could",
+    "should", "may", "might", "shall", "can", "need", "dare", "ought",
+    "used", "what", "which", "who", "whom", "this", "that", "these",
+    "those", "i", "me", "my", "myself", "we", "our", "ours", "ourselves",
+    "you", "your", "yours", "yourself", "yourselves", "he", "him", "his",
+    "himself", "she", "her", "hers", "herself", "it", "its", "itself",
+    "they", "them", "their", "theirs", "themselves", "and", "or", "but",
+    "if", "then", "else", "when", "where", "how", "why", "all", "each",
+    "every", "both", "few", "more", "most", "other", "some", "such",
+    "no", "not", "only", "own", "same", "so", "than", "too", "very",
+    "in", "on", "of", "for", "to", "with", "at", "by", "from", "as",
+    "into", "through", "during", "before", "after", "above", "below",
+    "between", "out", "off", "over", "under", "again", "further",
+    "then", "once", "here", "there", "about", "up", "down", "just",
+    "also", "now", "do", "does", "don", "doesn",
+}
 
 QUESTION_TEMPLATES = [
     {
@@ -94,6 +115,116 @@ def record_asked(question_id):
 def get_difficulty_distribution(experience_level):
     dist = cfg["question_engine"]["difficulty_distribution"]
     return dist.get(experience_level, dist["unknown"])
+
+
+class AdaptiveDifficultyManager:
+    def __init__(self, base_distribution, window_size=2):
+        self._base = base_distribution
+        self._window_size = window_size
+        self._scores = deque(maxlen=window_size)
+        self._level_order = ["easy", "medium", "hard"]
+        self._current_idx = 0
+        for i, level in enumerate(self._level_order):
+            if base_distribution.get(level, 0) > 0:
+                self._current_idx = i
+                break
+
+    def update(self, score):
+        self._scores.append(score)
+
+    def get_next_difficulty(self):
+        if len(self._scores) < self._window_size:
+            return self._level_order[self._current_idx]
+
+        avg = sum(self._scores) / len(self._scores)
+        escalate_thresh = cfg["question_engine"].get("escalate_threshold", 7.5)
+        deescalate_thresh = cfg["question_engine"].get("deescalate_threshold", 3.5)
+
+        if avg >= escalate_thresh and self._current_idx < len(self._level_order) - 1:
+            self._current_idx += 1
+        elif avg <= deescalate_thresh and self._current_idx > 0:
+            self._current_idx -= 1
+
+        return self._level_order[self._current_idx]
+
+
+def _tokenize_for_dedup(text):
+    text = text.lower().translate(str.maketrans("", "", string.punctuation))
+    return set(w for w in text.split() if w not in DEDUP_STOPWORDS and len(w) > 2)
+
+
+def semantic_overlap_score(q1_text, q2_text):
+    words1 = _tokenize_for_dedup(q1_text)
+    words2 = _tokenize_for_dedup(q2_text)
+    if not words1 or not words2:
+        return 0.0
+    intersection = words1 & words2
+    union = words1 | words2
+    return len(intersection) / len(union) if union else 0.0
+
+
+def deduplicate_by_topic(questions, max_per_topic=1):
+    topic_counts = {}
+    deduped = []
+    for q in questions:
+        topic = q.get("topic", "unknown")
+        count = topic_counts.get(topic, 0)
+        if count < max_per_topic:
+            deduped.append(q)
+            topic_counts[topic] = count + 1
+    return deduped
+
+
+def _semantic_dedup(questions, all_candidates, threshold=0.35):
+    if len(questions) <= 1:
+        return questions
+
+    selected = list(questions)
+    removed_indices = set()
+
+    for i in range(len(selected)):
+        if i in removed_indices:
+            continue
+        for j in range(i + 1, len(selected)):
+            if j in removed_indices:
+                continue
+            overlap = semantic_overlap_score(
+                selected[i].get("question", ""),
+                selected[j].get("question", ""),
+            )
+            if overlap > threshold:
+                qi = selected[i]
+                qj = selected[j]
+                remove_idx = j if qi.get("source") == "bank" else i
+                if qi.get("source") == "bank" and qj.get("source") != "bank":
+                    remove_idx = j
+                elif qj.get("source") == "bank" and qi.get("source") != "bank":
+                    remove_idx = i
+                else:
+                    diff_rank = {"easy": 0, "medium": 1, "hard": 2}
+                    ri = diff_rank.get(qi.get("difficulty", "medium"), 1)
+                    rj = diff_rank.get(qj.get("difficulty", "medium"), 1)
+                    remove_idx = j if rj >= ri else i
+                removed_indices.add(remove_idx)
+
+    for idx in sorted(removed_indices, reverse=True):
+        selected.pop(idx)
+
+    removed_count = len(questions) - len(selected)
+    if removed_count > 0:
+        remaining = [q for q in all_candidates if q not in selected]
+        for q in remaining:
+            if len(selected) >= len(questions):
+                break
+            duplicate = False
+            for existing in selected:
+                if semantic_overlap_score(q.get("question", ""), existing.get("question", "")) > threshold:
+                    duplicate = True
+                    break
+            if not duplicate:
+                selected.append(q)
+
+    return selected
 
 
 def filter_by_role(questions, experience_level):
@@ -205,20 +336,22 @@ def build_personalized_questions(resume_data, question_count=None):
     return personalized
 
 
-def select_questions(resume_data, question_count=None):
+def select_questions(resume_data, question_count=None, domain_questions=None):
     cfg_local = get_config()
     count = question_count or cfg_local["interview"]["question_count"]
     experience_level = resume_data.get("experience_level", "unknown")
     distribution = get_difficulty_distribution(experience_level)
 
-    candidates = filter_by_role(QUESTION_BANK, experience_level)
+    bank = domain_questions if domain_questions is not None else QUESTION_BANK
+
+    candidates = filter_by_role(bank, experience_level)
     candidates = filter_unasked(candidates)
 
     if len(candidates) < count:
-        candidates = filter_by_role(QUESTION_BANK, experience_level)
+        candidates = filter_by_role(bank, experience_level)
 
     if len(candidates) < count:
-        candidates = QUESTION_BANK.copy()
+        candidates = bank.copy()
 
     selected = select_by_difficulty_pool(candidates, count, distribution)
 
@@ -310,16 +443,25 @@ def _parse_json_response(text):
     return None
 
 
-def get_question_set(resume_data, question_count=None):
+def get_question_set(resume_data, question_count=None, domain_slug="marketing"):
+    from .domain_bridge import get_domain_questions
     cfg_local = get_config()
     count = question_count or cfg_local["interview"]["question_count"]
     use_llm = cfg_local["question_engine"]["use_llm_generation"]
+
+    if domain_slug != "marketing":
+        all_domain_questions = get_domain_questions(domain_slug)
+        if not all_domain_questions:
+            logger.warning("Domain '%s' returned no questions, falling back to marketing", domain_slug)
+            all_domain_questions = QUESTION_BANK
+    else:
+        all_domain_questions = QUESTION_BANK
 
     llm_questions = []
     if use_llm and resume_data and resume_data.get("experience_level"):
         llm_questions = generate_llm_questions(resume_data, count=count)
 
-    bank_questions = select_questions(resume_data, question_count=count - len(llm_questions))
+    bank_questions = select_questions(resume_data, question_count=count - len(llm_questions), domain_questions=all_domain_questions)
 
     personalized = build_personalized_questions(resume_data, question_count=min(2, count))
 
@@ -328,6 +470,16 @@ def get_question_set(resume_data, question_count=None):
     available_personalized = [p for p in personalized
                               if not any(p["question"] == q["question"] for q in all_questions)]
     all_questions.extend(available_personalized[:max(0, count - len(all_questions))])
+
+    if len(all_questions) > count:
+        all_questions = all_questions[:count]
+
+    max_per_topic = cfg["question_engine"].get("max_per_topic", 1)
+    if count <= 7:
+        max_per_topic = min(max_per_topic, 1)
+    all_questions = deduplicate_by_topic(all_questions, max_per_topic=max_per_topic)
+
+    all_questions = _semantic_dedup(all_questions, llm_questions + bank_questions + personalized, threshold=0.35)
 
     if len(all_questions) > count:
         all_questions = all_questions[:count]

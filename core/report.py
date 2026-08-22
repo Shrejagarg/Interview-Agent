@@ -7,22 +7,33 @@ logger = logging.getLogger(__name__)
 cfg = get_config()
 
 
+_SKIP_EVAL_KEYS = {
+    "overall_score", "strengths", "weaknesses", "follow_up",
+    "is_serious", "_parse_error", "_llm_error", "_skipped",
+    "_evaluation_error", "_prescreened", "_prescreen_reason",
+    "context_aware", "notes", "improved",
+}
+
+
 def _get_dimension_averages(answers):
-    totals = {"relevance": 0, "clarity": 0, "creativity": 0, "communication": 0}
-    count = 0
+    dim_totals = {}
+    dim_counts = {}
 
     for a in answers:
         ev = a.get("evaluation", {})
         if "_skipped" in ev or "_evaluation_error" in ev or "_parse_error" in ev:
             continue
-        for dim in totals:
-            totals[dim] += ev.get(dim, 0)
-        count += 1
+        for k, v in ev.items():
+            if k in _SKIP_EVAL_KEYS:
+                continue
+            if isinstance(v, (int, float)):
+                dim_totals[k] = dim_totals.get(k, 0) + v
+                dim_counts[k] = dim_counts.get(k, 0) + 1
 
-    if count == 0:
-        return {k: 0 for k in totals}
+    if not dim_totals:
+        return {}
 
-    return {k: round(v / count, 2) for k, v in totals.items()}
+    return {k: round(dim_totals[k] / dim_counts[k], 2) for k in dim_totals}
 
 
 def _get_strengths_weaknesses(answers):
@@ -31,7 +42,7 @@ def _get_strengths_weaknesses(answers):
 
     for a in answers:
         ev = a.get("evaluation", {})
-        if "_skipped" in ev or "_evaluation_error" in ev:
+        if "_skipped" in ev or "_evaluation_error" in ev or "_parse_error" in ev or "_llm_error" in ev:
             continue
         all_strengths.extend(ev.get("strengths", []))
         all_weaknesses.extend(ev.get("weaknesses", []))

@@ -3,10 +3,15 @@
 # LLM Settings
 llm:
   provider: "gemini"
-  model: "gemini-3.6-flash"
+  model: "gemini-3.5-flash"
+  fallback_models:
+    - "gemini-3.6-flash"
+    - "gemini-3.1-flash-lite"
+    - "gemini-flash-latest"
+    - "gemini-pro-latest"
   google_api_key: "REDACTED"
   ollama_model: "llama3"
-  timeout: 60
+  timeout: 120
   keep_alive: "10m"
   max_retries: 3
   retry_delay: 2
@@ -30,6 +35,12 @@ interview:
   question_count: 5
   show_feedback: true
   show_score_after_answer: true
+  use_context_window: true
+  context_window_size: 2
+  prescreening_enabled: true
+  prescreening_min_content_words: 8
+  followup_min_score: 3.0
+  followup_max_score: 8.5
 
 # Verdict Thresholds
 verdicts:
@@ -65,6 +76,11 @@ question_engine:
   randomize_order: true
   anti_repeat_window: 50
   topic_coverage_weight: 0.3
+  adaptive_difficulty: true
+  adaptive_window_size: 2
+  escalate_threshold: 7.5
+  deescalate_threshold: 3.5
+  max_per_topic: 1
   difficulty_distribution:
     fresher:
       easy: 0.7
@@ -82,6 +98,12 @@ question_engine:
       easy: 0.3
       medium: 0.5
       hard: 0.2
+
+# Persona
+persona:
+  style: "balanced"
+  company_context: ""
+  role_context: ""
 
 # Logging
 logging:

@@ -18,7 +18,7 @@ from backend.app.domains import get_registry
 from backend.app.domains.base import BaseDomain
 from backend.app.api.auth import get_optional_user, UserProfile
 
-from core.evaluator import _call_llm, _parse_json, _compute_weighted_score
+from core.evaluator import _call_llm, _parse_json, _compute_weighted_score, _normalize_scores
 from core.evaluator import evaluate_followup, merge
 
 logger = logging.getLogger(__name__)
@@ -65,13 +65,20 @@ def _select_questions(
     count: int,
     experience_level: str,
 ) -> List[Dict[str, Any]]:
+    from core.config import get_config
+    cfg = get_config()
     all_questions = domain.get_questions()
-    distribution = domain.get_difficulty_distribution(experience_level)
+    distribution = cfg["question_engine"]["difficulty_distribution"].get(
+        experience_level,
+        cfg["question_engine"]["difficulty_distribution"]["unknown"],
+    )
 
     pool: List[Dict[str, Any]] = []
     for diff, ratio in distribution.items():
+        n = max(1, round(count * ratio)) if ratio > 0 else 0
         diff_questions = [q for q in all_questions if q["difficulty"] == diff]
-        pool.extend(diff_questions)
+        random.shuffle(diff_questions)
+        pool.extend(diff_questions[:n])
 
     random.shuffle(pool)
 
@@ -108,9 +115,9 @@ def _evaluate_answer(
         logger.warning("LLM returned unparseable evaluation, using fallback scores")
         return _fallback_evaluation(answer_text)
 
-    defaults = {dim: 50 for dim in domain.scoring_dimensions}
+    defaults = {dim: 5 for dim in domain.scoring_dimensions}
     defaults.update({
-        "overall_score": 50,
+        "overall_score": 5,
         "strengths": [],
         "weaknesses": [],
         "follow_up": "",
@@ -118,9 +125,10 @@ def _evaluate_answer(
     })
     defaults.update(parsed)
 
+    defaults = _normalize_scores(defaults)
+
     for dim in domain.scoring_dimensions:
-        val = defaults.get(dim, 50)
-        defaults[dim] = max(0, min(100, int(val)))
+        defaults[dim] = round(max(0.0, min(10.0, float(defaults.get(dim, 5)))), 2)
 
     defaults["overall_score"] = _compute_weighted_score(defaults)
 
@@ -131,15 +139,15 @@ def _fallback_evaluation(answer_text: str) -> Dict[str, Any]:
     text = answer_text.strip().lower()
     if not text or len(text) < 10:
         return {
-            "overall_score": 10,
+            "overall_score": 1,
             "strengths": [],
             "weaknesses": ["Answer too short or empty"],
             "follow_up": "",
             "is_serious": False,
         }
-    score = min(80, 30 + len(text) // 10)
+    score = min(8, 3 + len(text) // 50)
     return {
-        "overall_score": score,
+        "overall_score": round(score / 10, 2),
         "strengths": ["Provided a response"],
         "weaknesses": ["Unable to verify with LLM"],
         "follow_up": "",
@@ -148,6 +156,11 @@ def _fallback_evaluation(answer_text: str) -> Dict[str, Any]:
 
 
 def _compute_session_summary(session: Dict[str, Any], domain: BaseDomain) -> Dict[str, Any]:
+    from core.config import get_config
+    cfg = get_config()
+    strong_thresh = cfg["verdicts"]["strong_threshold"]
+    avg_thresh = cfg["verdicts"]["average_threshold"]
+
     answers = session["answers"]
     if not answers:
         return {
@@ -164,25 +177,25 @@ def _compute_session_summary(session: Dict[str, Any], domain: BaseDomain) -> Dic
 
     topic_scores = {}
     for topic, scores in topic_buckets.items():
-        topic_scores[topic] = round(sum(scores) / len(scores), 1)
+        topic_scores[topic] = round(sum(scores) / len(scores), 2)
 
     overall = round(
         sum(a.get("evaluation", {}).get("overall_score", 0) for a in answers) / len(answers),
-        1,
+        2,
     )
 
-    if overall >= 75:
+    if overall >= strong_thresh:
         verdict = "strong"
-    elif overall >= 50:
+    elif overall >= avg_thresh:
         verdict = "moderate"
-    elif overall >= 25:
+    elif overall >= 2:
         verdict = "weak"
     else:
         verdict = "very_weak"
 
     recommendations = []
     for topic, avg in topic_scores.items():
-        if avg < 60:
+        if avg < avg_thresh:
             rec = domain.get_recommendation(topic, avg)
             recommendations.append({"topic": topic, "score": avg, "recommendation": rec})
 
@@ -368,6 +381,12 @@ def submit_followup(session_id: str, req: FollowupRequest):
 
     if not session.get("pending_followup"):
         raise HTTPException(status_code=422, detail="No pending follow-up question")
+
+    if not session.get("pending_answer_record") or not session.get("pending_evaluation"):
+        session["pending_followup"] = None
+        session["pending_evaluation"] = None
+        session["pending_answer_record"] = None
+        raise HTTPException(status_code=410, detail="Follow-up expired. Please answer the next question.")
 
     answer_text = req.answer_text.strip()
     if len(answer_text) < 5:

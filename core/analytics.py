@@ -103,9 +103,16 @@ def compare_sessions(session_ids=None):
     }
 
 
-def skill_gap_analysis(resume_data, session):
+def skill_gap_analysis(resume_data, session, domain_slug="marketing"):
+    from .domain_bridge import get_domain_skills
     if not resume_data:
         return {"error": "No resume data provided"}
+
+    domain_skills = get_domain_skills(domain_slug)
+    skill_to_category = {}
+    for cat, skills in domain_skills.items():
+        for s in skills:
+            skill_to_category[s] = cat
 
     resume_skills = resume_data.get("skills", {}).get("skills", [])
     topic_scores = session.get("topic_scores", {})
@@ -113,7 +120,7 @@ def skill_gap_analysis(resume_data, session):
 
     skill_scores = {}
     for skill in resume_skills:
-        skill_cat = SKILL_CATEGORIES.get(skill, "unknown")
+        skill_cat = skill_to_category.get(skill, "unknown")
         skill_scores[skill] = {
             "category": skill_cat,
             "resume_claimed": True,
@@ -136,12 +143,12 @@ def skill_gap_analysis(resume_data, session):
             scores = topic_answer_scores[cat]
             avg_score = round(sum(scores) / len(scores), 2)
             data["interview_score"] = avg_score
-            data["gap"] = round(10 - avg_score, 2) if avg_score < 10 else 0
+            data["gap"] = round(cfg["verdicts"]["strong_threshold"] - avg_score, 2) if avg_score < cfg["verdicts"]["strong_threshold"] else 0
         elif skill in topic_answer_scores:
             scores = topic_answer_scores[skill]
             avg_score = round(sum(scores) / len(scores), 2)
             data["interview_score"] = avg_score
-            data["gap"] = round(10 - avg_score, 2) if avg_score < 10 else 0
+            data["gap"] = round(cfg["verdicts"]["strong_threshold"] - avg_score, 2) if avg_score < cfg["verdicts"]["strong_threshold"] else 0
 
     overall_resume_score = resume_data.get("quality", {}).get("score", 0)
     skills_with_gaps = {k: v for k, v in skill_scores.items() if v["gap"] is not None and v["gap"] > 3}
@@ -174,7 +181,8 @@ def _summarize_gaps(critical_gaps, untested):
     return ". ".join(parts)
 
 
-def generate_recommendations(session, resume_data=None):
+def generate_recommendations(session, resume_data=None, domain_slug="marketing"):
+    from .domain_bridge import get_domain_skills, get_domain_recommendation
     topic_scores = session.get("topic_scores", {})
     answers = session.get("answers", [])
     weak_topics = session.get("weak_topics", [])
@@ -199,12 +207,13 @@ def generate_recommendations(session, resume_data=None):
             "topic": topic,
             "current_score": score,
             "priority": "high" if score < 4 else "medium",
-            "action": _get_topic_recommendation(topic, score),
+            "action": get_domain_recommendation(domain_slug, topic, score),
             "weaknesses": list(set(topic_weaknesses.get(topic, [])))[:3]
         }
         recommendations.append(rec)
 
-    untested_topics = set(MARKETING_SKILLS.keys()) - set(topic_scores.keys())
+    domain_skills = get_domain_skills(domain_slug)
+    untested_topics = set(domain_skills.keys()) - set(topic_scores.keys())
     if untested_topics:
         recommendations.append({
             "topic": "untested_topics",
@@ -224,7 +233,7 @@ def generate_recommendations(session, resume_data=None):
         })
 
     if resume_data:
-        gap_analysis = skill_gap_analysis(resume_data, session)
+        gap_analysis = skill_gap_analysis(resume_data, session, domain_slug=domain_slug)
         for skill, data in gap_analysis.get("critical_gaps", {}).items():
             recommendations.append({
                 "topic": skill,
@@ -304,7 +313,8 @@ def ascii_comparison_chart(session_a_data, session_b_data, label_a="Session A", 
 
 def export_text_report(session, resume_data=None, filepath=None):
     summary = get_session_summary(session)
-    recs = generate_recommendations(session, resume_data)
+    domain_slug = session.get("domain", "marketing")
+    recs = generate_recommendations(session, resume_data, domain_slug=domain_slug)
 
     lines = []
     lines.append("=" * 60)
@@ -332,7 +342,7 @@ def export_text_report(session, resume_data=None, filepath=None):
     lines.append("")
 
     if resume_data:
-        gap = skill_gap_analysis(resume_data, session)
+        gap = skill_gap_analysis(resume_data, session, domain_slug=domain_slug)
         lines.append("  --- SKILL GAP ANALYSIS ---")
         lines.append(f"  Resume Skills  : {gap['total_resume_skills']}")
         lines.append(f"  Skills OK      : {gap['skills_ok']}")
@@ -363,7 +373,8 @@ def export_text_report(session, resume_data=None, filepath=None):
 
 def export_structured_summary(session, resume_data=None):
     summary = get_session_summary(session)
-    recs = generate_recommendations(session, resume_data)
+    domain_slug = session.get("domain", "marketing")
+    recs = generate_recommendations(session, resume_data, domain_slug=domain_slug)
 
     result = {
         "session": summary,
@@ -371,7 +382,7 @@ def export_structured_summary(session, resume_data=None):
     }
 
     if resume_data:
-        result["skill_gap"] = skill_gap_analysis(resume_data, session)
+        result["skill_gap"] = skill_gap_analysis(resume_data, session, domain_slug=domain_slug)
 
     result["report_generated_at"] = datetime.now().isoformat()
     return result

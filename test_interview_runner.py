@@ -69,7 +69,7 @@ class TestHandleAnswerSkip:
         _handle_answer_skip(state, q, "", 5.0, "Answer too short")
         assert len(state["answers"]) == 1
         assert state["answers"][0]["evaluation"]["_skipped"] is True
-        assert state["topic_scores"]["seo"] == 0
+        assert "seo" not in state["topic_scores"]
 
     def test_adds_warning(self):
         state = create_interview_state()
@@ -92,8 +92,9 @@ class TestHandleFollowup:
         state = create_interview_state()
         q = {"question": "Test Q", "topic": "seo"}
         main_eval = {"follow_up": "", "is_serious": True}
-        score, interrupted = _handle_followup(state, q, main_eval, 1)
+        score, answer, interrupted = _handle_followup(state, q, main_eval, 1)
         assert score is None
+        assert answer is None
         assert interrupted is False
 
     @patch("core.interviewer.evaluate_followup")
@@ -105,16 +106,17 @@ class TestHandleFollowup:
         state = create_interview_state()
         q = {"question": "Test Q", "topic": "seo"}
         main_eval = {"follow_up": "Can you elaborate?", "is_serious": True}
-        score, interrupted = _handle_followup(state, q, main_eval, 1)
+        score, answer, interrupted = _handle_followup(state, q, main_eval, 1)
         assert interrupted is False
         assert score == 7.0
+        assert answer == "I would approach this by analyzing data"
 
     @patch("builtins.input", side_effect=KeyboardInterrupt)
     def test_interrupt_during_followup(self, mock_input):
         state = create_interview_state()
         q = {"question": "Test Q", "topic": "seo"}
         main_eval = {"follow_up": "Can you elaborate?", "is_serious": True}
-        score, interrupted = _handle_followup(state, q, main_eval, 1)
+        score, answer, interrupted = _handle_followup(state, q, main_eval, 1)
         assert interrupted is True
 
 

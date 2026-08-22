@@ -25,14 +25,16 @@ from .question_engine import (
     shuffle_questions, calculate_topic_coverage, select_by_difficulty_pool,
     get_difficulty_distribution, record_asked, load_asked_history,
     save_asked_history, filter_by_difficulty, ANTI_REPEAT_FILE,
-    _parse_json_response
+    _parse_json_response, AdaptiveDifficultyManager, deduplicate_by_topic,
+    semantic_overlap_score
 )
 from .question_bank import QUESTION_BANK, TOPICS, DIFFICULTY_LEVELS
 
 # Evaluator
 from .evaluator import (
     evaluate_main, evaluate_followup, merge, _parse_json,
-    _compute_weighted_score, _call_llm, check_health, check_model, warm_up
+    _compute_weighted_score, _normalize_scores, _call_llm, check_health,
+    check_model, warm_up, pre_screen_answer, PERSONA_PROMPTS
 )
 
 # Interviewer
@@ -57,4 +59,11 @@ from .analytics import (
     generate_recommendations, load_session, load_all_sessions,
     ascii_bar_chart, ascii_comparison_chart, export_text_report,
     export_structured_summary, compare_candidates, SESSIONS_DIR
+)
+
+# Domain Bridge
+from .domain_bridge import (
+    get_domain, get_domain_topics, get_domain_scoring_dimensions,
+    get_domain_evaluation_prompt, get_domain_questions, get_domain_skills,
+    get_domain_recommendation, list_available_domains
 )

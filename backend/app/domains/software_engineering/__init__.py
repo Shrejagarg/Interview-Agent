@@ -106,10 +106,13 @@ Evaluate the candidate's answer.
 Question: {question}
 Answer: {answer}
 
-Scoring rules:
-- If answer is abusive, irrelevant, nonsense, or empty -> very low scores
-- If answer is generic but somewhat relevant -> medium scores
-- If answer is technically accurate, well-structured, and includes examples -> high scores
+Scoring rules (ALL scores MUST be integers 0-10. NEVER use 0-100):
+- If answer is abusive, irrelevant, nonsense, or empty -> very low scores (0-2)
+- If answer is generic but somewhat relevant -> medium scores (4-6)
+- If answer is technically accurate, well-structured, and includes examples -> high scores (7-10)
+
+IMPORTANT: Use ONLY integers between 0 and 10 for ALL scores.
+DO NOT use a 0-100 scale.
 
 Return ONLY valid JSON in this exact format:
 {{
