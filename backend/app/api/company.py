@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from backend.app.domains import get_registry
 from backend.app.api.auth import get_current_user, UserProfile, require_role
-from backend.app.api.interviews import _sessions
+from backend.app.db.sessions import get_company_sessions_db, load_session_db
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -28,20 +28,16 @@ class InviteRequest(BaseModel):
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _get_company_sessions(company_id: str) -> List[Dict[str, Any]]:
-    """Return all sessions linked to a company."""
-    return [s for s in _sessions.values() if s.get("company_id") == company_id]
+    """Return all sessions linked to a company via DB."""
+    return get_company_sessions_db(company_id)
 
 
 def _get_session_detail(session_id: str) -> Dict[str, Any]:
     """Return full session detail with scores."""
-    session = _sessions.get(session_id)
+    session = load_session_db(session_id)
     if not session:
         return None
 
-    registry = get_registry()
-    domain = registry.get(session["domain"])
-
-    # Engine state should be finalized before viewing details
     if session["status"] == "completed" and "_avg" not in session:
         from core.state import finalize_topics, get_average
         finalize_topics(session)
@@ -51,21 +47,18 @@ def _get_session_detail(session_id: str) -> Dict[str, Any]:
     overall = session.get("_avg", 0)
     verdict = session.get("verdict", "Unknown")
 
-    recommendations = []
-    # (Optional) Domain recommendations could go here if still wanted
-
     per_answer = []
     for a in session.get("answers", []):
         per_answer.append({
             "question": a.get("question"),
             "topic": a.get("topic"),
-            "difficulty": a.get("evaluation", {}).get("difficulty", "?"),
+            "difficulty": a.get("difficulty", "?"),
             "answer": a.get("answer"),
             "score": a.get("evaluation", {}).get("overall_score", 0),
             "strengths": a.get("evaluation", {}).get("strengths", []),
             "weaknesses": a.get("evaluation", {}).get("weaknesses", []),
         })
-        
+
     from core.state import get_integrity_score
     integrity = get_integrity_score(session)
 
@@ -83,7 +76,7 @@ def _get_session_detail(session_id: str) -> Dict[str, Any]:
         "integrity_score": integrity,
         "topic_scores": topic_scores,
         "verdict": verdict,
-        "recommendations": recommendations,
+        "recommendations": [],
         "answers": per_answer,
     }
 
@@ -170,7 +163,7 @@ def get_company_session(
     user: UserProfile = Depends(require_role("company")),
 ):
     """Get full session detail for a company."""
-    session = _sessions.get(session_id)
+    session = load_session_db(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -233,7 +226,7 @@ def compare_sessions(
 
     comparisons = []
     for sid in ids:
-        session = _sessions.get(sid)
+        session = load_session_db(sid)
         if not session:
             raise HTTPException(status_code=404, detail=f"Session {sid} not found")
         if session.get("company_id") != user.user_id:

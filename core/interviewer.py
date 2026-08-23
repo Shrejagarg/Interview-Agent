@@ -240,6 +240,9 @@ def run_interview(state, resume_data=None, domain_slug="marketing"):
             f_data = last_ans.get("followup", {})
             _print_feedback(eval_data, None, eval_data.get("overall_score", 0), show_feedback, show_score)
             
+    if "verdict" not in state:
+        engine._finalize_interview(state)
+
     _print_verdict(state, len(state["answers"]))
     from .state import export_session
     filepath = export_session(state)

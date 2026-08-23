@@ -2,10 +2,10 @@
 
 Uses core/engine.py (InterviewEngine) as the stateless brain.
 Backend-specific: session management, resume upload, REST serialization.
+Sessions are persisted to Supabase via backend.app.db.sessions.
 """
 
 import logging
-import uuid
 from typing import Dict, List, Any, Optional, Union
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
@@ -13,17 +13,17 @@ from pydantic import BaseModel
 
 from backend.app.domains import get_registry
 from backend.app.api.auth import get_optional_user, UserProfile
+from backend.app.db.sessions import save_session_db, load_session_db, get_user_sessions_db, get_all_sessions_db
 
 from core.engine import InterviewEngine
 from core.state import create_interview_state
-from core.report import generate_report
+from core.config import get_config
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# In-memory session storage (Phase 1)
-_sessions: Dict[str, Dict[str, Any]] = {}
 engine = InterviewEngine()
+cfg = get_config()
 
 # ── Request / Response Models ─────────────────────────────────────────────────
 
@@ -62,7 +62,7 @@ def _format_question_response(state: dict, q_data: dict) -> dict:
             "is_followup": True,
             "question": q_data["question"]
         }
-        
+
     q = q_data["question_data"]
     return {
         "id": q.get("id"),
@@ -98,30 +98,28 @@ def start_interview(
                 experience_level = "senior"
             else:
                 experience_level = "mid"
-        
+
         resume_data = req.resume_data
         resume_data["experience_level"] = experience_level
     elif req.experience_level:
         resume_data["experience_level"] = experience_level
-    
+
     # 1. Create Core State
     state = create_interview_state(
         domain_slug=req.domain_slug,
-        role_context=None,  # Or parse from req if needed
+        role_context=None,
         user_id=user.user_id if user else "anonymous",
         mode=req.mode
     )
-    
+
     # 2. Start Interview via Engine
     state = engine.start_interview(state, resume_data=resume_data, question_count=req.question_count)
-    
-    # 3. Save to memory
+
+    # 3. Persist to DB
     session_id = state["session_id"]
-    _sessions[session_id] = state
-    
     q_data = engine.get_next_question(state)
-    _sessions[session_id] = state # Save state mutations from get_next_question
-    
+    save_session_db(state)
+
     return {
         "session_id": session_id,
         "domain": req.domain_slug,
@@ -133,24 +131,23 @@ def start_interview(
 
 @router.get("/{session_id}/question")
 def get_current_question(session_id: str):
-    state = _sessions.get(session_id)
+    state = load_session_db(session_id)
     if not state:
         raise HTTPException(status_code=404, detail="Session not found")
 
     if state["status"] == "completed":
         raise HTTPException(status_code=400, detail="Interview already completed")
 
-    # The engine returns the *current* question if it's already set
     q_data = engine.get_next_question(state)
     if not q_data:
         raise HTTPException(status_code=400, detail="No more questions")
-        
+
     return _format_question_response(state, q_data)
 
 
 @router.post("/{session_id}/answer")
 def submit_answer(session_id: str, req: AnswerRequest):
-    state = _sessions.get(session_id)
+    state = load_session_db(session_id)
     if not state:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -173,16 +170,14 @@ def submit_answer(session_id: str, req: AnswerRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    # Engine determines if followup is needed
     requires_followup = (state["status"] == "awaiting_followup")
-    
-    # If no followup, get next question
+
     next_q = None
     if not requires_followup:
         next_q_data = engine.get_next_question(state)
         next_q = _format_question_response(state, next_q_data)
 
-    _sessions[session_id] = state
+    save_session_db(state)
 
     return {
         "session_id": session_id,
@@ -197,7 +192,7 @@ def submit_answer(session_id: str, req: AnswerRequest):
 
 @router.post("/{session_id}/followup")
 def submit_followup(session_id: str, req: FollowupRequest):
-    state = _sessions.get(session_id)
+    state = load_session_db(session_id)
     if not state:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -212,11 +207,11 @@ def submit_followup(session_id: str, req: FollowupRequest):
         state = engine.submit_followup(state, answer_text)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-        
+
     next_q_data = engine.get_next_question(state)
     next_q = _format_question_response(state, next_q_data)
 
-    _sessions[session_id] = state
+    save_session_db(state)
 
     last_ans = state["answers"][-1]
 
@@ -232,7 +227,7 @@ def submit_followup(session_id: str, req: FollowupRequest):
 
 @router.get("/{session_id}/report")
 def get_report(session_id: str):
-    state = _sessions.get(session_id)
+    state = load_session_db(session_id)
     if not state:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -243,16 +238,33 @@ def get_report(session_id: str):
         state["_avg"] = get_average(state)
 
     per_answer = []
+    total_answer_time = 0
+    total_eval_time = 0
     for a in state.get("answers", []):
+        timing = a.get("timing", {})
+        total_answer_time += timing.get("answer_time_seconds", 0)
+        total_eval_time += timing.get("eval_time_seconds", 0)
         per_answer.append({
             "question": a.get("question"),
             "topic": a.get("topic"),
-            "difficulty": a.get("evaluation", {}).get("difficulty", "?"), # Engine may not store diff directly here, we might need to adjust
+            "difficulty": a.get("difficulty", "?"),
             "answer": a.get("answer"),
             "score": a.get("evaluation", {}).get("overall_score", 0),
             "strengths": a.get("evaluation", {}).get("strengths", []),
             "weaknesses": a.get("evaluation", {}).get("weaknesses", []),
         })
+
+    recommendations = []
+    for topic, avg in state.get("topic_scores", {}).items():
+        if avg < cfg["verdicts"]["average_threshold"]:
+            try:
+                registry = get_registry()
+                domain = registry.get(state["domain"])
+                if domain:
+                    rec = domain.get_recommendation(topic, avg)
+                    recommendations.append({"topic": topic, "score": avg, "recommendation": rec})
+            except Exception:
+                pass
 
     return {
         "session_id": session_id,
@@ -266,11 +278,11 @@ def get_report(session_id: str):
         "overall_score": state.get("_avg", 0),
         "topic_scores": state.get("topic_scores", {}),
         "verdict": state.get("verdict", "Unknown"),
-        "recommendations": [], # Could use generate_report to fill this
+        "recommendations": recommendations,
         "answers": per_answer,
         "timing": {
-            "total_answer_time": 0, # Simplify for now
-            "total_eval_time": 0,
+            "total_answer_time": round(total_answer_time, 2),
+            "total_eval_time": round(total_eval_time, 2),
         },
     }
 
@@ -325,9 +337,7 @@ async def parse_resume_upload(file: UploadFile = File(...)):
 
 @router.get("")
 def list_sessions(user: Optional[UserProfile] = Depends(get_optional_user)):
-    sessions = list(_sessions.values())
-    if user:
-        sessions = [s for s in sessions if s.get("user_id") == user.user_id]
+    sessions = get_all_sessions_db()
 
     return {
         "sessions": [

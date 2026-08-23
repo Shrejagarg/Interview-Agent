@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from fastapi.testclient import TestClient
 from backend.app import app
-from backend.app.api.interviews import _sessions
+from backend.tests.conftest import _mock_sessions
 
 
 def _mock_llm(messages, *args, **kwargs):
@@ -185,7 +185,7 @@ class TestInterviewsAPI:
         assert body["answer_recorded"] is True
         assert "evaluation" in body
         assert "overall_score" in body["evaluation"]
-        assert 0 <= body["evaluation"]["overall_score"] <= 100
+        assert 0 <= body["evaluation"]["overall_score"] <= 10
 
     def test_submit_answer_too_short(self):
         sid = _start_session("sales")
@@ -235,7 +235,7 @@ class TestInterviewsAPI:
 
     def test_list_sessions(self):
         _start_session("finance", count=1)
-        r = client.get("/api/interviews")
+        r = client.get("/api/interviews", headers={"Authorization": "Bearer dev-token"})
         assert r.status_code == 200
         assert len(r.json()["sessions"]) >= 1
 
@@ -364,7 +364,7 @@ def _mock_llm_with_followup(messages, *args, **kwargs):
 class TestFollowupFlow:
     def test_answer_triggers_followup(self):
         """When LLM returns follow_up, session pauses and returns followup."""
-        _sessions.clear()
+        _mock_sessions.clear()
         sid = _start_session("marketing", count=1)
 
         with patch("core.evaluator._call_llm", side_effect=_mock_llm_with_followup):
@@ -383,7 +383,7 @@ class TestFollowupFlow:
 
     def test_submit_followup_merges_score(self):
         """Follow-up answer merges with main score using merge()."""
-        _sessions.clear()
+        _mock_sessions.clear()
         sid = _start_session("marketing", count=1)
 
         with patch("core.evaluator._call_llm", side_effect=_mock_llm_with_followup):
@@ -405,7 +405,7 @@ class TestFollowupFlow:
 
     def test_followup_completes_session_when_last(self):
         """Follow-up on last question marks session completed."""
-        _sessions.clear()
+        _mock_sessions.clear()
         sid = _start_session("marketing", count=1)
 
         with patch("core.evaluator._call_llm", side_effect=_mock_llm_with_followup):
@@ -421,7 +421,7 @@ class TestFollowupFlow:
 
         body = r.json()
         assert body["has_next"] is False
-        session = _sessions[sid]
+        session = _mock_sessions[sid]
         assert session["status"] == "completed"
 
     def test_followup_without_pending_returns_error(self):
@@ -434,7 +434,7 @@ class TestFollowupFlow:
 
     def test_followup_answer_too_short(self):
         """Short followup answer returns 422."""
-        _sessions.clear()
+        _mock_sessions.clear()
         sid = _start_session("marketing", count=1)
 
         with patch("core.evaluator._call_llm", side_effect=_mock_llm_with_followup):
@@ -451,7 +451,7 @@ class TestFollowupFlow:
 
     def test_cannot_submit_main_answer_with_pending_followup(self):
         """Cannot submit a new main answer while followup is pending."""
-        _sessions.clear()
+        _mock_sessions.clear()
         sid = _start_session("marketing", count=2)
 
         with patch("core.evaluator._call_llm", side_effect=_mock_llm_with_followup):
@@ -469,7 +469,7 @@ class TestFollowupFlow:
 
     def test_report_includes_timing(self):
         """Report endpoint includes timing data."""
-        _sessions.clear()
+        _mock_sessions.clear()
         sid = _start_session("marketing", count=1)
         q = client.get(f"/api/interviews/{sid}/question").json()
         client.post(f"/api/interviews/{sid}/answer", json={

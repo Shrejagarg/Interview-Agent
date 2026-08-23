@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from fastapi.testclient import TestClient
 from backend.app import app
-from backend.app.api.interviews import _sessions
+from backend.tests.conftest import _mock_sessions
 from backend.app.api.auth import UserProfile
 
 AUTH_PATCH_TARGET = "backend.app.api.auth.get_current_user"
@@ -66,13 +66,13 @@ _patches = [
 def setup_module():
     for p in _patches:
         p.start()
-    _sessions.clear()
+    _mock_sessions.clear()
 
 
 def teardown_module():
     for p in _patches:
         p.stop()
-    _sessions.clear()
+    _mock_sessions.clear()
 
 
 def _create_session_with_answers(
@@ -88,7 +88,7 @@ def _create_session_with_answers(
     }, headers={"Authorization": "Bearer test-token"})
     sid = resp.json()["session_id"]
 
-    session = _sessions[sid]
+    session = _mock_sessions[sid]
     session["user_id"] = user_id
     session["company_id"] = company_id
 
@@ -110,7 +110,7 @@ def _create_session_with_answers(
 class TestCompanyDashboard:
     @patch(AUTH_PATCH_TARGET, side_effect=_mock_company_auth)
     def test_dashboard_returns_stats(self, _mock):
-        _sessions.clear()
+        _mock_sessions.clear()
         _create_session_with_answers("marketing", count=2)
         _create_session_with_answers("finance", count=1)
 
@@ -125,7 +125,7 @@ class TestCompanyDashboard:
 
     @patch(AUTH_PATCH_TARGET, side_effect=_mock_company_auth)
     def test_dashboard_empty(self, _mock):
-        _sessions.clear()
+        _mock_sessions.clear()
         r = client.get("/api/company/dashboard", headers={"Authorization": "Bearer tok"})
         assert r.status_code == 200
         body = r.json()
@@ -171,7 +171,7 @@ class TestRoleEnforcement:
 class TestCompanySessions:
     @patch(AUTH_PATCH_TARGET, side_effect=_mock_company_auth)
     def test_list_sessions(self, _mock):
-        _sessions.clear()
+        _mock_sessions.clear()
         _create_session_with_answers("marketing", count=2)
         _create_session_with_answers("finance", count=1)
 
@@ -181,7 +181,7 @@ class TestCompanySessions:
 
     @patch(AUTH_PATCH_TARGET, side_effect=_mock_company_auth)
     def test_list_sessions_filter_domain(self, _mock):
-        _sessions.clear()
+        _mock_sessions.clear()
         _create_session_with_answers("marketing", count=1)
         _create_session_with_answers("finance", count=1)
 
@@ -192,7 +192,7 @@ class TestCompanySessions:
 
     @patch(AUTH_PATCH_TARGET, side_effect=_mock_company_auth)
     def test_list_sessions_filter_status(self, _mock):
-        _sessions.clear()
+        _mock_sessions.clear()
         _create_session_with_answers("marketing", count=1)
 
         r = client.get("/api/company/sessions?status=completed", headers={"Authorization": "Bearer tok"})
@@ -202,7 +202,7 @@ class TestCompanySessions:
 
     @patch(AUTH_PATCH_TARGET, side_effect=_mock_company_auth)
     def test_get_session_detail(self, _mock):
-        _sessions.clear()
+        _mock_sessions.clear()
         sid = _create_session_with_answers("marketing", count=1)
 
         r = client.get(f"/api/company/sessions/{sid}", headers={"Authorization": "Bearer tok"})
@@ -226,7 +226,7 @@ class TestCompanySessions:
 class TestCompanyCandidates:
     @patch(AUTH_PATCH_TARGET, side_effect=_mock_company_auth)
     def test_list_candidates(self, _mock):
-        _sessions.clear()
+        _mock_sessions.clear()
         _create_session_with_answers("marketing", count=2, user_id="cand-001")
         _create_session_with_answers("finance", count=1, user_id="cand-002")
 
@@ -237,7 +237,7 @@ class TestCompanyCandidates:
 
     @patch(AUTH_PATCH_TARGET, side_effect=_mock_company_auth)
     def test_candidates_have_scores(self, _mock):
-        _sessions.clear()
+        _mock_sessions.clear()
         _create_session_with_answers("marketing", count=1, user_id="cand-001")
 
         r = client.get("/api/company/candidates", headers={"Authorization": "Bearer tok"})
@@ -249,7 +249,7 @@ class TestCompanyCandidates:
 
     @patch(AUTH_PATCH_TARGET, side_effect=_mock_company_auth)
     def test_candidates_sorted_by_score(self, _mock):
-        _sessions.clear()
+        _mock_sessions.clear()
         _create_session_with_answers("marketing", count=1, user_id="cand-low")
         _create_session_with_answers("marketing", count=2, user_id="cand-high")
 
@@ -263,7 +263,7 @@ class TestCompanyCandidates:
 class TestCompanyCompare:
     @patch(AUTH_PATCH_TARGET, side_effect=_mock_company_auth)
     def test_compare_sessions(self, _mock):
-        _sessions.clear()
+        _mock_sessions.clear()
         s1 = _create_session_with_answers("marketing", count=2)
         s2 = _create_session_with_answers("finance", count=2)
 
@@ -275,7 +275,7 @@ class TestCompanyCompare:
 
     @patch(AUTH_PATCH_TARGET, side_effect=_mock_company_auth)
     def test_compare_needs_two(self, _mock):
-        _sessions.clear()
+        _mock_sessions.clear()
         s1 = _create_session_with_answers("marketing", count=1)
 
         r = client.get(f"/api/company/compare?session_ids={s1}", headers={"Authorization": "Bearer tok"})

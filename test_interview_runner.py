@@ -127,11 +127,12 @@ class TestPrintVerdict:
 
 
 class TestRunInterviewIntegration:
-    @patch("core.interviewer.get_question_set")
-    @patch("core.interviewer.evaluate_followup")
-    @patch("core.interviewer.evaluate_main")
+    @patch("core.engine.pre_screen_answer", return_value={"pass": True, "auto_score": 0})
+    @patch("core.engine.get_question_set")
+    @patch("core.engine.evaluate_followup")
+    @patch("core.engine.evaluate_main")
     @patch("builtins.input", return_value="SEO is search engine optimization used to rank higher on Google")
-    def test_runs_full_interview(self, mock_input, mock_eval, mock_follow, mock_qs):
+    def test_runs_full_interview(self, mock_input, mock_eval, mock_follow, mock_qs, mock_prescreen):
         mock_qs.return_value = {
             "questions": [
                 {"id": 1, "question": "What is SEO?", "topic": "seo", "difficulty": "easy", "roles": ["fresher"]}
@@ -158,7 +159,7 @@ class TestRunInterviewIntegration:
         assert "verdict" in result
         assert result["verdict"] in ("Strong", "Average", "Needs Improvement")
 
-    @patch("core.interviewer.get_question_set")
+    @patch("core.engine.get_question_set")
     @patch("builtins.input", side_effect=KeyboardInterrupt)
     def test_ctrl_c_saves_partial(self, mock_input, mock_qs):
         mock_qs.return_value = {
@@ -179,7 +180,7 @@ class TestRunInterviewIntegration:
         assert len(result["answers"]) == 0
         assert result["verdict"] in ("Strong", "Average", "Needs Improvement")
 
-    @patch("core.interviewer.get_question_set")
+    @patch("core.engine.get_question_set")
     @patch("builtins.input", return_value="no")
     def test_short_answer_skipped(self, mock_input, mock_qs):
         mock_qs.return_value = {
@@ -199,11 +200,12 @@ class TestRunInterviewIntegration:
         assert len(result["answers"]) == 1
         assert result["answers"][0]["evaluation"]["_skipped"] is True
 
-    @patch("core.interviewer.get_question_set")
-    @patch("core.interviewer.evaluate_followup")
-    @patch("core.interviewer.evaluate_main")
+    @patch("core.engine.pre_screen_answer", return_value={"pass": True, "auto_score": 0})
+    @patch("core.engine.get_question_set")
+    @patch("core.engine.evaluate_followup")
+    @patch("core.engine.evaluate_main")
     @patch("builtins.input", return_value="This is a comprehensive marketing answer with SEO strategy details")
-    def test_valid_answer_evaluated(self, mock_input, mock_eval, mock_follow, mock_qs):
+    def test_valid_answer_evaluated(self, mock_input, mock_eval, mock_follow, mock_qs, mock_prescreen):
         mock_qs.return_value = {
             "questions": [
                 {"id": 1, "question": "What is SEO?", "topic": "seo", "difficulty": "easy", "roles": ["fresher"]}

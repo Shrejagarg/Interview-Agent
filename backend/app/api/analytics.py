@@ -6,8 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.app.domains import get_registry
-from backend.app.api.interviews import _sessions
+from backend.app.db.sessions import load_session_db, get_all_sessions_db, get_sessions_by_domain_db
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -28,18 +27,20 @@ class SessionSummary(BaseModel):
 @router.get("/sessions")
 def list_analytics_sessions(domain: Optional[str] = None):
     """List all sessions with analytics summaries."""
+    if domain:
+        sessions = get_sessions_by_domain_db(domain)
+    else:
+        sessions = get_all_sessions_db()
+
     results = []
-    for sid, s in _sessions.items():
-        if domain and s["domain"] != domain:
-            continue
-            
+    for s in sessions:
         if s["status"] == "completed" and "_avg" not in s:
             from core.state import finalize_topics, get_average
             finalize_topics(s)
             s["_avg"] = get_average(s)
 
         results.append({
-            "session_id": sid,
+            "session_id": s["session_id"],
             "domain": s["domain"],
             "status": s["status"],
             "overall_score": s.get("_avg", 0),
@@ -60,10 +61,9 @@ def compare_sessions(session_ids: str):
     if len(ids) < 2:
         raise HTTPException(status_code=422, detail="Provide at least 2 comma-separated session IDs")
 
-    registry = get_registry()
     summaries = []
     for sid in ids:
-        s = _sessions.get(sid)
+        s = load_session_db(sid)
         if not s:
             raise HTTPException(status_code=404, detail=f"Session '{sid}' not found")
         if s["status"] == "completed" and "_avg" not in s:
@@ -105,12 +105,10 @@ def compare_sessions(session_ids: str):
 @router.get("/recommendations/{session_id}")
 def get_recommendations(session_id: str):
     """Get personalized study recommendations for a session."""
-    session = _sessions.get(session_id)
+    session = load_session_db(session_id)
     if not session:
         raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found")
 
-    registry = get_registry()
-    domain = registry.get(session["domain"])
     if session["status"] == "completed" and "_avg" not in session:
         from core.state import finalize_topics, get_average
         finalize_topics(session)
@@ -122,5 +120,5 @@ def get_recommendations(session_id: str):
         "overall_score": session.get("_avg", 0),
         "verdict": session.get("verdict", "Unknown"),
         "topic_scores": session.get("topic_scores", {}),
-        "recommendations": [], # Defer recommendations to core logic later
+        "recommendations": [],
     }
