@@ -3,6 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import * as api from "@/lib/api";
+import DataTable from "@/components/DataTable";
+import { VerdictBadge } from "@/components/Badge";
+
+const DOMAINS = ["marketing", "software_engineering", "finance", "hr", "sales"];
 
 export default function SessionsPage() {
   const router = useRouter();
@@ -13,60 +17,117 @@ export default function SessionsPage() {
 
   useEffect(() => {
     setLoading(true);
-    api.listCompanySessions(domainFilter || undefined, statusFilter || undefined)
+    api
+      .listCompanySessions(domainFilter || undefined, statusFilter || undefined)
       .then((r) => setSessions(r.sessions))
       .finally(() => setLoading(false));
   }, [domainFilter, statusFilter]);
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-4">Sessions</h1>
-      <div className="flex gap-2 mb-4">
-        <select value={domainFilter} onChange={(e) => setDomainFilter(e.target.value)} className="p-2 border border-gray-200 text-sm">
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Sessions</h1>
+        <p className="mt-1 text-sm text-gray-500">{sessions.length} session{sessions.length !== 1 ? "s" : ""}</p>
+      </div>
+
+      <div className="flex gap-3">
+        <select
+          value={domainFilter}
+          onChange={(e) => setDomainFilter(e.target.value)}
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-slate-400 focus:outline-none"
+        >
           <option value="">All domains</option>
-          <option value="marketing">Marketing</option>
-          <option value="software_engineering">Software Engineering</option>
-          <option value="finance">Finance</option>
-          <option value="hr">HR</option>
-          <option value="sales">Sales</option>
+          {DOMAINS.map((d) => (
+            <option key={d} value={d}>
+              {d.replace(/_/g, " ")}
+            </option>
+          ))}
         </select>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="p-2 border border-gray-200 text-sm">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-slate-400 focus:outline-none"
+        >
           <option value="">All statuses</option>
           <option value="completed">Completed</option>
           <option value="in_progress">In Progress</option>
         </select>
       </div>
-      {loading ? <p>Loading...</p> : sessions.length === 0 ? (
-        <p className="text-gray-500">No sessions found.</p>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-slate-900" />
+        </div>
       ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-2">Domain</th>
-              <th className="text-left py-2">Level</th>
-              <th className="text-left py-2">Status</th>
-              <th className="text-right py-2">Score</th>
-              <th className="text-right py-2">Answers</th>
-              <th className="text-right py-2">Started</th>
-              <th className="text-right py-2">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sessions.map((s) => (
-              <tr key={s.id} className="border-b border-gray-100">
-                <td className="py-2">{s.domain}</td>
-                <td className="py-2">{s.experience_level}</td>
-                <td className="py-2">{s.status}</td>
-                <td className="py-2 text-right">{s.score}</td>
-                <td className="py-2 text-right">{s.answers}</td>
-                <td className="py-2 text-right">{new Date(s.started_at).toLocaleDateString()}</td>
-                <td className="py-2 text-right">
-                  <button onClick={() => router.push(`/sessions/${s.id}`)} className="text-blue-600 hover:underline cursor-pointer">View</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          data={sessions as unknown as Record<string, unknown>[]}
+          onRowClick={(item) => {
+            const s = item as unknown as api.CompanySession;
+            router.push(`/sessions/${s.id}`);
+          }}
+          emptyMessage="No sessions found"
+          columns={[
+            {
+              key: "domain",
+              label: "Domain",
+              render: (item) => (
+                <span className="font-medium text-slate-900">
+                  {(item as unknown as api.CompanySession).domain.replace(/_/g, " ")}
+                </span>
+              ),
+            },
+            {
+              key: "experience_level",
+              label: "Level",
+              render: (item) => (
+                <span className="text-gray-600">{(item as unknown as api.CompanySession).experience_level}</span>
+              ),
+            },
+            {
+              key: "status",
+              label: "Status",
+              render: (item) => {
+                const s = (item as unknown as api.CompanySession).status;
+                return <VerdictBadge verdict={s === "completed" ? "Completed" : s} />;
+              },
+            },
+            {
+              key: "score",
+              label: "Score",
+              align: "right",
+              render: (item) => {
+                const s = (item as unknown as api.CompanySession).score;
+                return (
+                  <span
+                    className={`font-bold ${
+                      s >= 7 ? "text-emerald-600" : s >= 4 ? "text-amber-600" : "text-rose-600"
+                    }`}
+                  >
+                    {s.toFixed(1)}
+                  </span>
+                );
+              },
+            },
+            {
+              key: "answers",
+              label: "Answers",
+              align: "right",
+              render: (item) => (
+                <span className="text-gray-500">{(item as unknown as api.CompanySession).answers}</span>
+              ),
+            },
+            {
+              key: "started_at",
+              label: "Date",
+              align: "right",
+              render: (item) => (
+                <span className="text-gray-500">
+                  {new Date((item as unknown as api.CompanySession).started_at).toLocaleDateString()}
+                </span>
+              ),
+            },
+          ]}
+        />
       )}
     </div>
   );

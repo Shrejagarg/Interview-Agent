@@ -1,47 +1,129 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import * as api from "@/lib/api";
+import DataTable from "@/components/DataTable";
+import Badge from "@/components/Badge";
 
 export default function CandidatesPage() {
+  const router = useRouter();
   const [candidates, setCandidates] = useState<api.Candidate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [domainFilter, setDomainFilter] = useState("");
+  const [verdictFilter, setVerdictFilter] = useState("");
 
   useEffect(() => {
-    api.listCandidates().then((r) => setCandidates(r.candidates)).finally(() => setLoading(false));
+    api
+      .listCandidates()
+      .then((r) => setCandidates(r.candidates))
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p>Loading candidates...</p>;
+  const domains = useMemo(() => {
+    const set = new Set<string>();
+    candidates.forEach((c) => Object.keys(c.domain_scores).forEach((d) => set.add(d)));
+    return Array.from(set).sort();
+  }, [candidates]);
+
+  const filtered = useMemo(() => {
+    if (!domainFilter) return candidates;
+    return candidates.filter((c) => domainFilter in c.domain_scores);
+  }, [candidates, domainFilter]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-slate-900" />
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-4">Candidates</h1>
-      {candidates.length === 0 ? (
-        <p className="text-gray-500">No candidates yet.</p>
-      ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-2">User ID</th>
-              <th className="text-right py-2">Sessions</th>
-              <th className="text-right py-2">Avg Score</th>
-              <th className="text-left py-2">Domain Scores</th>
-            </tr>
-          </thead>
-          <tbody>
-            {candidates.map((c) => (
-              <tr key={c.user_id} className="border-b border-gray-100">
-                <td className="py-2">{c.user_id}</td>
-                <td className="py-2 text-right">{c.total_sessions}</td>
-                <td className="py-2 text-right font-medium">{c.avg_score}</td>
-                <td className="py-2 text-sm text-gray-600">
-                  {Object.entries(c.domain_scores).map(([d, s]) => `${d}: ${s}`).join(", ")}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Candidates</h1>
+        <p className="mt-1 text-sm text-gray-500">{filtered.length} candidate{filtered.length !== 1 ? "s" : ""} total</p>
+      </div>
+
+      <div className="flex gap-3">
+        <select
+          value={domainFilter}
+          onChange={(e) => setDomainFilter(e.target.value)}
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-slate-400 focus:outline-none"
+        >
+          <option value="">All domains</option>
+          {domains.map((d) => (
+            <option key={d} value={d}>
+              {d.replace(/_/g, " ")}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <DataTable
+        data={filtered as unknown as Record<string, unknown>[]}
+        onRowClick={(item) => {
+          const c = item as unknown as api.Candidate;
+          router.push(`/candidates?user=${c.user_id}`);
+        }}
+        emptyMessage="No candidates found"
+        columns={[
+          {
+            key: "user_id",
+            label: "Candidate",
+            render: (item) => (
+              <span className="font-medium text-slate-900">
+                {(item as unknown as api.Candidate).user_id.slice(0, 12)}…
+              </span>
+            ),
+          },
+          {
+            key: "total_sessions",
+            label: "Sessions",
+            align: "right",
+            render: (item) => (
+              <span className="text-gray-600">{(item as unknown as api.Candidate).total_sessions}</span>
+            ),
+          },
+          {
+            key: "domain_scores",
+            label: "Domain Scores",
+            render: (item) => {
+              const c = item as unknown as api.Candidate;
+              return (
+                <div className="flex flex-wrap gap-1">
+                  {Object.entries(c.domain_scores).map(([d, s]) => (
+                    <Badge
+                      key={d}
+                      variant={s >= 7 ? "pass" : s >= 4 ? "warning" : "fail"}
+                    >
+                      {d.replace(/_/g, " ")}: {s.toFixed(1)}
+                    </Badge>
+                  ))}
+                </div>
+              );
+            },
+          },
+          {
+            key: "avg_score",
+            label: "Avg Score",
+            align: "right",
+            render: (item) => {
+              const avg = (item as unknown as api.Candidate).avg_score;
+              return (
+                <span
+                  className={`text-lg font-bold ${
+                    avg >= 7 ? "text-emerald-600" : avg >= 4 ? "text-amber-600" : "text-rose-600"
+                  }`}
+                >
+                  {avg.toFixed(1)}
+                </span>
+              );
+            },
+          },
+        ]}
+      />
     </div>
   );
 }

@@ -3,25 +3,22 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+/* Glass card utility */
+@layer components {
+  .glass {
+    @apply rounded-xl border border-white/30 bg-white/70 backdrop-blur-sm shadow-sm;
+  }
+  .glass-hover {
+    @apply glass transition-all duration-200 hover:shadow-md hover:border-white/40;
   }
 }
