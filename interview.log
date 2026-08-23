@@ -16777,3 +16777,618 @@ Generating full report...
 2026-08-22 12:44:11 [INFO] core.report: ==================================================
 2026-08-22 12:44:11 [INFO] core.state: Session 20260822_123404_5a4ed01f exported to R:\IMP\interview v2\sessions\session_20260822_123404_5a4ed01f.json
 2026-08-22 12:44:11 [INFO] core.report: Session saved to: R:\IMP\interview v2\sessions\session_20260822_123404_5a4ed01f.json
+2026-08-22 13:31:17 [INFO] core.evaluator: Gemini API configured (key present)
+2026-08-22 13:31:17 [INFO] core.evaluator: Primary model  : gemini-3.5-flash
+2026-08-22 13:31:17 [INFO] core.evaluator: Fallback chain : gemini-3.6-flash -> gemini-3.1-flash-lite -> gemini-flash-latest -> gemini-pro-latest
+2026-08-22 13:31:17 [INFO] __main__: Loading model...
+2026-08-22 13:31:19 [DEBUG] httpcore.connection: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=120 socket_options=None
+2026-08-22 13:31:19 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000021B7D199BE0>
+2026-08-22 13:31:19 [DEBUG] httpcore.connection: start_tls.started ssl_context=<ssl.SSLContext object at 0x0000021B7D1234A0> server_hostname='generativelanguage.googleapis.com' timeout=120
+2026-08-22 13:31:19 [DEBUG] httpcore.connection: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000021B7D0CF4D0>
+2026-08-22 13:31:19 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-22 13:31:19 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-22 13:31:19 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-22 13:31:19 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-22 13:31:19 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-22 13:31:21 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'X-Gemini-Service-Tier', b'standard'), (b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sat, 22 Aug 2026 08:01:21 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=1389'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+2026-08-22 13:31:21 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-08-22 13:31:21 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-22 13:31:21 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-22 13:31:21 [DEBUG] httpcore.http11: response_closed.started
+2026-08-22 13:31:21 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-22 13:31:21 [DEBUG] httpcore.connection: close.started
+2026-08-22 13:31:21 [DEBUG] httpcore.connection: close.complete
+2026-08-22 13:31:21 [INFO] core.evaluator: Gemini API warmed up successfully (active model: gemini-3.5-flash)
+2026-08-22 13:31:21 [INFO] __main__: Ready!
+
+2026-08-22 13:31:22 [INFO] backend.app.domains.registry: Loaded domain: marketing (Marketing)
+2026-08-22 13:31:22 [INFO] backend.app.domains.registry: Loaded domain: software_engineering (Software Engineering)
+2026-08-22 13:31:22 [INFO] backend.app.domains.registry: Loaded domain: finance (Finance)
+2026-08-22 13:31:22 [INFO] backend.app.domains.registry: Loaded domain: hr (Human Resources)
+2026-08-22 13:31:22 [INFO] backend.app.domains.registry: Loaded domain: sales (Sales)
+2026-08-22 13:31:22 [INFO] backend.app.domains.registry: Domain registry loaded: 5 domains
+2026-08-22 13:31:22 [DEBUG] core.domain_bridge: Domain registry loaded into core bridge
+2026-08-22 13:31:22 [INFO] __main__: Available domains:
+2026-08-22 13:31:22 [INFO] __main__:   [1] Marketing — Digital marketing, branding, analytics, social media, and campaign strategy
+2026-08-22 13:31:22 [INFO] __main__:   [2] Software Engineering — DSA, system design, OOP, databases, APIs, and software architecture
+2026-08-22 13:31:22 [INFO] __main__:   [3] Finance — Valuation, accounting, markets, financial modeling, and analysis
+2026-08-22 13:31:22 [INFO] __main__:   [4] Human Resources — Recruitment, employee relations, labor law, L&D, and organizational development
+2026-08-22 13:31:22 [INFO] __main__:   [5] Sales — Pipeline management, negotiation, CRM, cold outreach, and closing
+2026-08-22 13:33:01 [INFO] __main__: Invalid choice, defaulting to Marketing
+2026-08-22 13:33:01 [INFO] __main__: Domain: marketing
+
+2026-08-22 13:33:01 [INFO] __main__: 
+2026-08-22 13:33:01 [INFO] __main__: Do you want to upload a resume? (y/n)
+2026-08-22 13:33:23 [INFO] core.evaluator: Gemini API configured (key present)
+2026-08-22 13:33:23 [INFO] core.evaluator: Primary model  : gemini-3.5-flash
+2026-08-22 13:33:23 [INFO] core.evaluator: Fallback chain : gemini-3.6-flash -> gemini-3.1-flash-lite -> gemini-flash-latest -> gemini-pro-latest
+2026-08-22 13:33:23 [INFO] __main__: Loading model...
+2026-08-22 13:33:25 [DEBUG] httpcore.connection: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=120 socket_options=None
+2026-08-22 13:33:25 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001836B5D9BE0>
+2026-08-22 13:33:25 [DEBUG] httpcore.connection: start_tls.started ssl_context=<ssl.SSLContext object at 0x000001836B5634A0> server_hostname='generativelanguage.googleapis.com' timeout=120
+2026-08-22 13:33:25 [DEBUG] httpcore.connection: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001836B50F4D0>
+2026-08-22 13:33:25 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-22 13:33:25 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-22 13:33:25 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-22 13:33:25 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-22 13:33:25 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-22 13:33:27 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'X-Gemini-Service-Tier', b'standard'), (b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sat, 22 Aug 2026 08:03:27 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=1969'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+2026-08-22 13:33:27 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-08-22 13:33:27 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-22 13:33:27 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-22 13:33:27 [DEBUG] httpcore.http11: response_closed.started
+2026-08-22 13:33:27 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-22 13:33:27 [DEBUG] httpcore.connection: close.started
+2026-08-22 13:33:27 [DEBUG] httpcore.connection: close.complete
+2026-08-22 13:33:27 [INFO] core.evaluator: Gemini API warmed up successfully (active model: gemini-3.5-flash)
+2026-08-22 13:33:27 [INFO] __main__: Ready!
+
+2026-08-22 13:33:28 [INFO] backend.app.domains.registry: Loaded domain: marketing (Marketing)
+2026-08-22 13:33:28 [INFO] backend.app.domains.registry: Loaded domain: software_engineering (Software Engineering)
+2026-08-22 13:33:28 [INFO] backend.app.domains.registry: Loaded domain: finance (Finance)
+2026-08-22 13:33:28 [INFO] backend.app.domains.registry: Loaded domain: hr (Human Resources)
+2026-08-22 13:33:28 [INFO] backend.app.domains.registry: Loaded domain: sales (Sales)
+2026-08-22 13:33:28 [INFO] backend.app.domains.registry: Domain registry loaded: 5 domains
+2026-08-22 13:33:28 [DEBUG] core.domain_bridge: Domain registry loaded into core bridge
+2026-08-22 13:33:28 [INFO] __main__: Available domains:
+2026-08-22 13:33:28 [INFO] __main__:   [1] Marketing — Digital marketing, branding, analytics, social media, and campaign strategy
+2026-08-22 13:33:28 [INFO] __main__:   [2] Software Engineering — DSA, system design, OOP, databases, APIs, and software architecture
+2026-08-22 13:33:28 [INFO] __main__:   [3] Finance — Valuation, accounting, markets, financial modeling, and analysis
+2026-08-22 13:33:28 [INFO] __main__:   [4] Human Resources — Recruitment, employee relations, labor law, L&D, and organizational development
+2026-08-22 13:33:28 [INFO] __main__:   [5] Sales — Pipeline management, negotiation, CRM, cold outreach, and closing
+2026-08-22 13:33:44 [INFO] __main__: Domain: software_engineering
+
+2026-08-22 13:33:44 [INFO] __main__: 
+2026-08-22 13:33:44 [INFO] __main__: Do you want to upload a resume? (y/n)
+2026-08-22 13:33:59 [INFO] core.state: Created new session: 20260822_133359_bdc7248d
+2026-08-22 13:33:59 [WARNING] core.question_engine: Corrupt anti-repeat file, resetting
+2026-08-22 13:33:59 [WARNING] core.question_engine: Corrupt anti-repeat file, resetting
+2026-08-22 13:33:59 [INFO] core.interviewer: 
+2026-08-22 13:33:59 [INFO] core.interviewer: ==================================================
+2026-08-22 13:33:59 [INFO] core.interviewer:            INTERVIEW SESSION
+2026-08-22 13:33:59 [INFO] core.interviewer: ==================================================
+2026-08-22 13:33:59 [INFO] core.interviewer: 
+2026-08-22 13:33:59 [INFO] core.interviewer:   Candidate level  : unknown
+2026-08-22 13:33:59 [INFO] core.interviewer:   Questions        : 3
+2026-08-22 13:33:59 [INFO] core.interviewer:   LLM personalized : 0
+2026-08-22 13:33:59 [INFO] core.interviewer:   Topic coverage   : 20%
+2026-08-22 13:33:59 [INFO] core.interviewer:   Max follow-ups   : 1 per question
+2026-08-22 13:33:59 [INFO] core.interviewer:   Adaptive difficulty: ON
+2026-08-22 13:33:59 [INFO] core.interviewer: 
+2026-08-22 13:33:59 [INFO] core.interviewer:   Type your answers below. Press Ctrl+C to exit early.
+2026-08-22 13:33:59 [INFO] core.interviewer: ==================================================
+2026-08-22 13:33:59 [INFO] core.interviewer: 
+[Question 1/3 | Topic: databases]
+2026-08-22 13:33:59 [INFO] core.interviewer: --------------------------------------------------
+2026-08-22 13:33:59 [INFO] core.interviewer:   [easy] What is the difference between SQL and NoSQL databases? When would you use each?
+2026-08-22 13:34:12 [INFO] core.interviewer:   Evaluating...
+2026-08-22 13:34:13 [DEBUG] httpcore.connection: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=120 socket_options=None
+2026-08-22 13:34:13 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001836D178690>
+2026-08-22 13:34:13 [DEBUG] httpcore.connection: start_tls.started ssl_context=<ssl.SSLContext object at 0x000001836D13ED50> server_hostname='generativelanguage.googleapis.com' timeout=120
+2026-08-22 13:34:13 [DEBUG] httpcore.connection: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001836D11C640>
+2026-08-22 13:34:13 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-22 13:34:13 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-22 13:34:13 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-22 13:34:13 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-22 13:34:13 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-22 13:34:19 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'X-Gemini-Service-Tier', b'standard'), (b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sat, 22 Aug 2026 08:04:19 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=5951'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+2026-08-22 13:34:19 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-08-22 13:34:19 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-22 13:34:19 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-22 13:34:19 [DEBUG] httpcore.http11: response_closed.started
+2026-08-22 13:34:19 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-22 13:34:19 [DEBUG] httpcore.connection: close.started
+2026-08-22 13:34:19 [DEBUG] httpcore.connection: close.complete
+2026-08-22 13:34:19 [INFO] core.interviewer: 
+2026-08-22 13:34:19 [INFO] core.interviewer:   Follow-up: You mentioned high scalability needs for NoSQL. Can you explain the difference between horizontal and vertical scaling, and how the CAP theorem influences your choice of a NoSQL database?
+2026-08-22 13:34:35 [DEBUG] httpcore.connection: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=120 socket_options=None
+2026-08-22 13:34:35 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001836D11CC30>
+2026-08-22 13:34:35 [DEBUG] httpcore.connection: start_tls.started ssl_context=<ssl.SSLContext object at 0x000001836D13F020> server_hostname='generativelanguage.googleapis.com' timeout=120
+2026-08-22 13:34:35 [DEBUG] httpcore.connection: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001836D1328D0>
+2026-08-22 13:34:35 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-22 13:34:35 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-22 13:34:35 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-22 13:34:35 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-22 13:34:35 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-22 13:34:40 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'X-Gemini-Service-Tier', b'standard'), (b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sat, 22 Aug 2026 08:04:40 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=4894'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+2026-08-22 13:34:40 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-08-22 13:34:40 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-22 13:34:40 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-22 13:34:40 [DEBUG] httpcore.http11: response_closed.started
+2026-08-22 13:34:40 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-22 13:34:40 [DEBUG] httpcore.connection: close.started
+2026-08-22 13:34:40 [DEBUG] httpcore.connection: close.complete
+2026-08-22 13:34:40 [INFO] core.interviewer: 
+2026-08-22 13:34:40 [INFO] core.interviewer:   Score: 5.90
+2026-08-22 13:34:40 [INFO] core.interviewer:   Relevance: 0  Clarity: 0  Creativity: 0  Communication: 6
+2026-08-22 13:34:40 [INFO] core.interviewer:   Strengths: Correctly identifies the fundamental structural differences, such as predefined vs. dynamic schemas.; Accurately maps SQL to ACID transactions and complex querying, and NoSQL to scalability and rapid development.
+2026-08-22 13:34:40 [INFO] core.interviewer:   Weaknesses: The answer is highly generic and lacks specific database examples (e.g., PostgreSQL, MongoDB, Cassandra) to demonstrate practical experience.; Fails to explain the underlying mechanics of why NoSQL scales better (e.g., horizontal vs. vertical scaling) or the trade-offs involved, such as the CAP theorem.
+2026-08-22 13:34:40 [INFO] core.interviewer:   Follow-up score: 8.00
+2026-08-22 13:34:40 [INFO] core.interviewer: --------------------------------------------------
+2026-08-22 13:34:40 [INFO] core.interviewer: 
+[Question 2/3 | Topic: oop]
+2026-08-22 13:34:40 [INFO] core.interviewer: --------------------------------------------------
+2026-08-22 13:34:40 [INFO] core.interviewer:   [medium] What is the difference between inheritance and composition? When would you prefer one over the other?
+2026-08-22 13:48:19 [INFO] core.evaluator: Gemini API configured (key present)
+2026-08-22 13:48:19 [INFO] core.evaluator: Primary model  : gemini-3.5-flash
+2026-08-22 13:48:19 [INFO] core.evaluator: Fallback chain : gemini-3.6-flash -> gemini-3.1-flash-lite -> gemini-flash-latest -> gemini-pro-latest
+2026-08-22 13:48:19 [INFO] __main__: Loading model...
+2026-08-22 13:48:21 [DEBUG] httpcore.connection: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=120 socket_options=None
+2026-08-22 13:48:21 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001889F94DBE0>
+2026-08-22 13:48:21 [DEBUG] httpcore.connection: start_tls.started ssl_context=<ssl.SSLContext object at 0x000001889F8C36E0> server_hostname='generativelanguage.googleapis.com' timeout=120
+2026-08-22 13:48:21 [DEBUG] httpcore.connection: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001889F877750>
+2026-08-22 13:48:21 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-22 13:48:21 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-22 13:48:21 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-22 13:48:21 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-22 13:48:21 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-22 13:48:23 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'X-Gemini-Service-Tier', b'standard'), (b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sat, 22 Aug 2026 08:18:23 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=1864'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+2026-08-22 13:48:23 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-08-22 13:48:23 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-22 13:48:23 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-22 13:48:23 [DEBUG] httpcore.http11: response_closed.started
+2026-08-22 13:48:23 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-22 13:48:23 [DEBUG] httpcore.connection: close.started
+2026-08-22 13:48:23 [DEBUG] httpcore.connection: close.complete
+2026-08-22 13:48:23 [INFO] core.evaluator: Gemini API warmed up successfully (active model: gemini-3.5-flash)
+2026-08-22 13:48:23 [INFO] __main__: Ready!
+
+2026-08-22 13:48:25 [INFO] backend.app.domains.registry: Loaded domain: marketing (Marketing)
+2026-08-22 13:48:25 [INFO] backend.app.domains.registry: Loaded domain: software_engineering (Software Engineering)
+2026-08-22 13:48:25 [INFO] backend.app.domains.registry: Loaded domain: finance (Finance)
+2026-08-22 13:48:25 [INFO] backend.app.domains.registry: Loaded domain: hr (Human Resources)
+2026-08-22 13:48:25 [INFO] backend.app.domains.registry: Loaded domain: sales (Sales)
+2026-08-22 13:48:25 [INFO] backend.app.domains.registry: Domain registry loaded: 5 domains
+2026-08-22 13:48:25 [DEBUG] core.domain_bridge: Domain registry loaded into core bridge
+2026-08-22 13:48:25 [INFO] __main__: Available domains:
+2026-08-22 13:48:25 [INFO] __main__:   [1] Marketing — Digital marketing, branding, analytics, social media, and campaign strategy
+2026-08-22 13:48:25 [INFO] __main__:   [2] Software Engineering — DSA, system design, OOP, databases, APIs, and software architecture
+2026-08-22 13:48:25 [INFO] __main__:   [3] Finance — Valuation, accounting, markets, financial modeling, and analysis
+2026-08-22 13:48:25 [INFO] __main__:   [4] Human Resources — Recruitment, employee relations, labor law, L&D, and organizational development
+2026-08-22 13:48:25 [INFO] __main__:   [5] Sales — Pipeline management, negotiation, CRM, cold outreach, and closing
+2026-08-22 13:48:38 [INFO] __main__: Domain: software_engineering
+
+2026-08-22 13:48:38 [INFO] __main__: 
+2026-08-22 13:48:38 [INFO] __main__: Do you want to upload a resume? (y/n)
+2026-08-22 13:48:55 [INFO] __main__: Do you want to simulate a company pre-screening? (y/n)
+2026-08-22 13:49:11 [INFO] __main__:   Pre-screening ON — threshold: 8.0, time limit: 15s
+2026-08-22 13:49:11 [INFO] core.state: Created new session: 20260822_134911_fec92fcf
+2026-08-22 13:49:11 [WARNING] core.question_engine: Corrupt anti-repeat file, resetting
+2026-08-22 13:49:11 [WARNING] core.question_engine: Corrupt anti-repeat file, resetting
+2026-08-22 13:49:11 [INFO] core.interviewer: 
+2026-08-22 13:49:11 [INFO] core.interviewer: ==================================================
+2026-08-22 13:49:11 [INFO] core.interviewer:            INTERVIEW SESSION
+2026-08-22 13:49:11 [INFO] core.interviewer: ==================================================
+2026-08-22 13:49:11 [INFO] core.interviewer: 
+2026-08-22 13:49:11 [INFO] core.interviewer:   Candidate level  : unknown
+2026-08-22 13:49:11 [INFO] core.interviewer:   Questions        : 5
+2026-08-22 13:49:11 [INFO] core.interviewer:   LLM personalized : 0
+2026-08-22 13:49:11 [INFO] core.interviewer:   Topic coverage   : 33%
+2026-08-22 13:49:11 [INFO] core.interviewer:   Max follow-ups   : 1 per question
+2026-08-22 13:49:11 [INFO] core.interviewer:   Adaptive difficulty: ON
+2026-08-22 13:49:11 [INFO] core.interviewer: 
+2026-08-22 13:49:11 [INFO] core.interviewer:   Type your answers below. Press Ctrl+C to exit early.
+2026-08-22 13:49:11 [INFO] core.interviewer: ==================================================
+2026-08-22 13:49:11 [INFO] core.interviewer: 
+[Question 1/5 | Topic: code_review]
+2026-08-22 13:49:11 [INFO] core.interviewer: --------------------------------------------------
+2026-08-22 13:49:11 [INFO] core.interviewer:   [easy] What do you look for when reviewing someone's code?
+2026-08-22 13:49:33 [WARNING] core.interviewer:   >> Answer time (21.98s) exceeded limit (15s)
+2026-08-22 13:49:33 [INFO] core.interviewer:   Evaluating...
+2026-08-22 13:49:34 [DEBUG] httpcore.connection: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=120 socket_options=None
+2026-08-22 13:49:34 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x00000188A14FC910>
+2026-08-22 13:49:34 [DEBUG] httpcore.connection: start_tls.started ssl_context=<ssl.SSLContext object at 0x00000188A14BEF90> server_hostname='generativelanguage.googleapis.com' timeout=120
+2026-08-22 13:49:34 [DEBUG] httpcore.connection: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x00000188A149C640>
+2026-08-22 13:49:34 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-22 13:49:34 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-22 13:49:34 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-22 13:49:34 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-22 13:49:34 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-22 13:49:39 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'X-Gemini-Service-Tier', b'standard'), (b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sat, 22 Aug 2026 08:19:39 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=4784'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+2026-08-22 13:49:39 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-08-22 13:49:39 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-22 13:49:39 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-22 13:49:39 [DEBUG] httpcore.http11: response_closed.started
+2026-08-22 13:49:39 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-22 13:49:39 [DEBUG] httpcore.connection: close.started
+2026-08-22 13:49:39 [DEBUG] httpcore.connection: close.complete
+2026-08-22 13:49:39 [INFO] core.interviewer: 
+2026-08-22 13:49:39 [INFO] core.interviewer:   Follow-up: Could you walk me through a specific example of a critical security or performance issue you caught in a past code review, and how you communicated that feedback to the developer?
+2026-08-22 14:14:43 [INFO] core.evaluator: Gemini API configured (key present)
+2026-08-22 14:14:43 [INFO] core.evaluator: Primary model  : gemini-3.5-flash
+2026-08-22 14:14:43 [INFO] core.evaluator: Fallback chain : gemini-3.6-flash -> gemini-3.1-flash-lite -> gemini-flash-latest -> gemini-pro-latest
+2026-08-22 14:14:43 [INFO] __main__: Loading model...
+2026-08-22 14:14:55 [DEBUG] httpcore.connection: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=120 socket_options=None
+2026-08-22 14:14:55 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000002BA37031940>
+2026-08-22 14:14:55 [DEBUG] httpcore.connection: start_tls.started ssl_context=<ssl.SSLContext object at 0x000002BA36FAF650> server_hostname='generativelanguage.googleapis.com' timeout=120
+2026-08-22 14:14:55 [DEBUG] httpcore.connection: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000002BA36F63610>
+2026-08-22 14:14:55 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-22 14:14:55 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-22 14:14:55 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-22 14:14:55 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-22 14:14:55 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-22 14:14:57 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'X-Gemini-Service-Tier', b'standard'), (b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sat, 22 Aug 2026 08:44:57 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=1862'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+2026-08-22 14:14:57 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-08-22 14:14:57 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-22 14:14:57 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-22 14:14:57 [DEBUG] httpcore.http11: response_closed.started
+2026-08-22 14:14:57 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-22 14:14:57 [DEBUG] httpcore.connection: close.started
+2026-08-22 14:14:57 [DEBUG] httpcore.connection: close.complete
+2026-08-22 14:14:57 [INFO] core.evaluator: Gemini API warmed up successfully (active model: gemini-3.5-flash)
+2026-08-22 14:14:57 [INFO] __main__: Ready!
+
+2026-08-22 14:15:11 [INFO] backend.app.domains.registry: Loaded domain: marketing (Marketing)
+2026-08-22 14:15:11 [INFO] backend.app.domains.registry: Loaded domain: software_engineering (Software Engineering)
+2026-08-22 14:15:11 [INFO] backend.app.domains.registry: Loaded domain: finance (Finance)
+2026-08-22 14:15:11 [INFO] backend.app.domains.registry: Loaded domain: hr (Human Resources)
+2026-08-22 14:15:11 [INFO] backend.app.domains.registry: Loaded domain: sales (Sales)
+2026-08-22 14:15:11 [INFO] backend.app.domains.registry: Domain registry loaded: 5 domains
+2026-08-22 14:15:11 [DEBUG] core.domain_bridge: Domain registry loaded into core bridge
+2026-08-22 14:15:11 [INFO] __main__: Available domains:
+2026-08-22 14:15:11 [INFO] __main__:   [1] Marketing — Digital marketing, branding, analytics, social media, and campaign strategy
+2026-08-22 14:15:11 [INFO] __main__:   [2] Software Engineering — DSA, system design, OOP, databases, APIs, and software architecture
+2026-08-22 14:15:11 [INFO] __main__:   [3] Finance — Valuation, accounting, markets, financial modeling, and analysis
+2026-08-22 14:15:11 [INFO] __main__:   [4] Human Resources — Recruitment, employee relations, labor law, L&D, and organizational development
+2026-08-22 14:15:11 [INFO] __main__:   [5] Sales — Pipeline management, negotiation, CRM, cold outreach, and closing
+2026-08-22 14:15:28 [INFO] __main__: Domain: software_engineering
+
+2026-08-22 14:15:28 [INFO] __main__: Select mode:
+2026-08-22 14:15:28 [INFO] __main__:   [1] Mock Interview — Full scoring, time limits, prescreening
+2026-08-22 14:15:28 [INFO] __main__:   [2] Practice (Warmup) — Coaching tips, no strict limits
+2026-08-22 14:15:40 [INFO] __main__: Mode: warmup
+
+2026-08-22 14:15:40 [INFO] __main__: 
+2026-08-22 14:15:40 [INFO] __main__: Do you want to upload a resume? (y/n)
+2026-08-22 14:15:57 [INFO] __main__: Do you want to simulate a company pre-screening? (y/n)
+2026-08-22 14:16:14 [INFO] core.state: Created new session: 20260822_141614_273f6027
+2026-08-22 14:16:14 [INFO] core.interviewer: 
+2026-08-22 14:16:14 [INFO] core.interviewer: ==================================================
+2026-08-22 14:16:14 [INFO] core.interviewer:          PRACTICE SESSION (WARMUP)
+2026-08-22 14:16:14 [INFO] core.interviewer: ==================================================
+2026-08-22 14:16:14 [INFO] core.interviewer: 
+2026-08-22 14:16:14 [INFO] core.interviewer:   [Warmup Mode] Take your time. Focus on structuring your thoughts.
+2026-08-22 14:16:14 [INFO] core.interviewer:   Scores and time limits are relaxed. Coaching tips are shown after each answer.
+2026-08-22 14:16:14 [INFO] core.interviewer: 
+2026-08-22 14:16:14 [INFO] core.interviewer:   Candidate level  : unknown
+2026-08-22 14:16:14 [INFO] core.interviewer:   Questions        : 5
+2026-08-22 14:16:14 [INFO] core.interviewer:   LLM personalized : 0
+2026-08-22 14:16:14 [INFO] core.interviewer:   Topic coverage   : 27%
+2026-08-22 14:16:14 [INFO] core.interviewer:   Max follow-ups   : 1 per question
+2026-08-22 14:16:14 [INFO] core.interviewer:   Adaptive difficulty: ON
+2026-08-22 14:16:14 [INFO] core.interviewer: 
+2026-08-22 14:16:14 [INFO] core.interviewer:   Type your answers below. Press Ctrl+C to exit early.
+2026-08-22 14:16:14 [INFO] core.interviewer: ==================================================
+2026-08-22 14:16:14 [INFO] core.interviewer: 
+[Question 1/5 | Topic: api_design]
+2026-08-22 14:16:14 [INFO] core.interviewer: --------------------------------------------------
+2026-08-22 14:16:14 [INFO] core.interviewer:   [easy] What is REST? What makes an API RESTful?
+2026-08-22 14:16:27 [INFO] core.interviewer:   Evaluating...
+2026-08-22 14:16:28 [DEBUG] httpcore.connection: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=120 socket_options=None
+2026-08-22 14:16:28 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000002BA38BDC7D0>
+2026-08-22 14:16:28 [DEBUG] httpcore.connection: start_tls.started ssl_context=<ssl.SSLContext object at 0x000002BA38BA3020> server_hostname='generativelanguage.googleapis.com' timeout=120
+2026-08-22 14:16:28 [DEBUG] httpcore.connection: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000002BA38B88640>
+2026-08-22 14:16:28 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-22 14:16:28 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-22 14:16:28 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-22 14:16:28 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-22 14:16:28 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-22 14:16:34 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'X-Gemini-Service-Tier', b'standard'), (b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sat, 22 Aug 2026 08:46:34 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=6124'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+2026-08-22 14:16:34 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-08-22 14:16:34 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-22 14:16:34 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-22 14:16:34 [DEBUG] httpcore.http11: response_closed.started
+2026-08-22 14:16:34 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-22 14:16:34 [DEBUG] httpcore.connection: close.started
+2026-08-22 14:16:34 [DEBUG] httpcore.connection: close.complete
+2026-08-22 14:16:34 [INFO] core.interviewer:   Strengths: Correctly identifies JSON as a data format highly associated with modern web APIs.
+2026-08-22 14:16:34 [INFO] core.interviewer:   Weaknesses: Factually incorrect: REST is an architectural style, and returning JSON is neither a requirement of REST nor does it make an API RESTful.; Fails to mention any core REST constraints such as statelessness, client-server separation, cacheability, or uniform interface.; Extremely brief and lacks the technical depth expected for a software engineering role.
+2026-08-22 14:16:34 [INFO] core.interviewer: --------------------------------------------------
+2026-08-22 14:16:34 [INFO] core.interviewer:   >> Difficulty adjusted to: easy (rolling avg: 1.0)
+2026-08-22 14:16:34 [INFO] core.interviewer: 
+[Question 2/5 | Topic: dsa]
+2026-08-22 14:16:34 [INFO] core.interviewer: --------------------------------------------------
+2026-08-22 14:16:34 [INFO] core.interviewer:   [easy] What is the difference between an array and a linked list? When would you use each?
+2026-08-22 14:18:17 [INFO] core.evaluator: Gemini API configured (key present)
+2026-08-22 14:18:17 [INFO] core.evaluator: Primary model  : gemini-3.5-flash
+2026-08-22 14:18:17 [INFO] core.evaluator: Fallback chain : gemini-3.6-flash -> gemini-3.1-flash-lite -> gemini-flash-latest -> gemini-pro-latest
+2026-08-22 14:18:17 [INFO] __main__: Loading model...
+2026-08-22 14:18:22 [DEBUG] httpcore.connection: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=120 socket_options=None
+2026-08-22 14:18:22 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000020AFB451940>
+2026-08-22 14:18:22 [DEBUG] httpcore.connection: start_tls.started ssl_context=<ssl.SSLContext object at 0x0000020AFB3CF650> server_hostname='generativelanguage.googleapis.com' timeout=120
+2026-08-22 14:18:22 [DEBUG] httpcore.connection: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000020AFB383610>
+2026-08-22 14:18:22 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-22 14:18:22 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-22 14:18:22 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-22 14:18:22 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-22 14:18:22 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-22 14:18:24 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'X-Gemini-Service-Tier', b'standard'), (b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sat, 22 Aug 2026 08:48:24 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=1478'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+2026-08-22 14:18:24 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-08-22 14:18:24 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-22 14:18:24 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-22 14:18:24 [DEBUG] httpcore.http11: response_closed.started
+2026-08-22 14:18:24 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-22 14:18:24 [DEBUG] httpcore.connection: close.started
+2026-08-22 14:18:24 [DEBUG] httpcore.connection: close.complete
+2026-08-22 14:18:24 [INFO] core.evaluator: Gemini API warmed up successfully (active model: gemini-3.5-flash)
+2026-08-22 14:18:24 [INFO] __main__: Ready!
+
+2026-08-22 14:18:43 [INFO] backend.app.domains.registry: Loaded domain: marketing (Marketing)
+2026-08-22 14:18:43 [INFO] backend.app.domains.registry: Loaded domain: software_engineering (Software Engineering)
+2026-08-22 14:18:43 [INFO] backend.app.domains.registry: Loaded domain: finance (Finance)
+2026-08-22 14:18:43 [INFO] backend.app.domains.registry: Loaded domain: hr (Human Resources)
+2026-08-22 14:18:44 [INFO] backend.app.domains.registry: Loaded domain: sales (Sales)
+2026-08-22 14:18:44 [INFO] backend.app.domains.registry: Domain registry loaded: 5 domains
+2026-08-22 14:18:44 [DEBUG] core.domain_bridge: Domain registry loaded into core bridge
+2026-08-22 14:18:44 [INFO] __main__: Available domains:
+2026-08-22 14:18:44 [INFO] __main__:   [1] Marketing — Digital marketing, branding, analytics, social media, and campaign strategy
+2026-08-22 14:18:44 [INFO] __main__:   [2] Software Engineering — DSA, system design, OOP, databases, APIs, and software architecture
+2026-08-22 14:18:44 [INFO] __main__:   [3] Finance — Valuation, accounting, markets, financial modeling, and analysis
+2026-08-22 14:18:44 [INFO] __main__:   [4] Human Resources — Recruitment, employee relations, labor law, L&D, and organizational development
+2026-08-22 14:18:44 [INFO] __main__:   [5] Sales — Pipeline management, negotiation, CRM, cold outreach, and closing
+2026-08-22 14:18:44 [INFO] __main__: Domain: software_engineering
+
+2026-08-22 14:18:44 [INFO] __main__: Select mode:
+2026-08-22 14:18:44 [INFO] __main__:   [1] Mock Interview — Full scoring, time limits, prescreening
+2026-08-22 14:18:44 [INFO] __main__:   [2] Practice (Warmup) — Coaching tips, no strict limits
+2026-08-22 14:18:44 [INFO] __main__: Mode: warmup
+
+2026-08-22 14:18:44 [INFO] __main__: 
+2026-08-22 14:18:44 [INFO] __main__: Do you want to upload a resume? (y/n)
+2026-08-22 14:18:44 [INFO] __main__: Do you want to simulate a company pre-screening? (y/n)
+2026-08-22 14:18:56 [INFO] core.state: Created new session: 20260822_141856_b4376303
+2026-08-22 14:18:56 [INFO] core.interviewer: 
+2026-08-22 14:18:56 [INFO] core.interviewer: ==================================================
+2026-08-22 14:18:56 [INFO] core.interviewer:          PRACTICE SESSION (WARMUP)
+2026-08-22 14:18:56 [INFO] core.interviewer: ==================================================
+2026-08-22 14:18:56 [INFO] core.interviewer: 
+2026-08-22 14:18:56 [INFO] core.interviewer:   [Warmup Mode] Take your time. Focus on structuring your thoughts.
+2026-08-22 14:18:56 [INFO] core.interviewer:   Scores and time limits are relaxed. Coaching tips are shown after each answer.
+2026-08-22 14:18:56 [INFO] core.interviewer: 
+2026-08-22 14:18:56 [INFO] core.interviewer:   Candidate level  : unknown
+2026-08-22 14:18:56 [INFO] core.interviewer:   Questions        : 5
+2026-08-22 14:18:56 [INFO] core.interviewer:   LLM personalized : 0
+2026-08-22 14:18:56 [INFO] core.interviewer:   Topic coverage   : 27%
+2026-08-22 14:18:57 [INFO] core.interviewer:   Max follow-ups   : 1 per question
+2026-08-22 14:18:57 [INFO] core.interviewer:   Adaptive difficulty: ON
+2026-08-22 14:18:57 [INFO] core.interviewer: 
+2026-08-22 14:18:57 [INFO] core.interviewer:   Type your answers below. Press Ctrl+C to exit early.
+2026-08-22 14:18:57 [INFO] core.interviewer: ==================================================
+2026-08-22 14:18:57 [INFO] core.interviewer: 
+[Question 1/5 | Topic: performance]
+2026-08-22 14:18:57 [INFO] core.interviewer: --------------------------------------------------
+2026-08-22 14:18:57 [INFO] core.interviewer:   [medium] How do you optimize a slow API endpoint? Walk me through your debugging process.
+2026-08-22 14:19:12 [INFO] core.interviewer:   Evaluating...
+2026-08-22 14:19:13 [DEBUG] httpcore.connection: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=120 socket_options=None
+2026-08-22 14:19:13 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000020AFD018910>
+2026-08-22 14:19:13 [DEBUG] httpcore.connection: start_tls.started ssl_context=<ssl.SSLContext object at 0x0000020AFCFB3A40> server_hostname='generativelanguage.googleapis.com' timeout=120
+2026-08-22 14:19:13 [DEBUG] httpcore.connection: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000020AFCF988A0>
+2026-08-22 14:19:13 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-22 14:19:13 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-22 14:19:13 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-22 14:19:13 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-22 14:19:13 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-22 14:19:19 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'X-Gemini-Service-Tier', b'standard'), (b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sat, 22 Aug 2026 08:49:19 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=6050'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+2026-08-22 14:19:19 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-08-22 14:19:19 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-22 14:19:19 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-22 14:19:19 [DEBUG] httpcore.http11: response_closed.started
+2026-08-22 14:19:19 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-22 14:19:19 [DEBUG] httpcore.connection: close.started
+2026-08-22 14:19:19 [DEBUG] httpcore.connection: close.complete
+2026-08-22 14:19:19 [INFO] core.interviewer:   Strengths: Identifies RAM as a system resource, which is technically a scaling factor.
+2026-08-22 14:19:19 [INFO] core.interviewer:   Weaknesses: Completely bypasses any debugging, profiling, or root-cause analysis process.; Relies on expensive vertical hardware scaling rather than addressing inefficient code or database queries.; Extremely brief, dismissive, and lacks the professional communication expected in an interview.
+2026-08-22 14:19:19 [INFO] core.interviewer: 
+2026-08-22 14:19:19 [INFO] core.interviewer:   Coaching: Here is what a strong answer looks like:
+2026-08-22 14:19:19 [INFO] core.interviewer:   To optimize a slow API, I first profile the endpoint using APM tools to pinpoint the bottleneck, whether it is an unindexed database query, CPU-bound code, or network latency. Once the root cause is identified, I implement targeted optimizations such as adding database indexes, introducing a caching layer like Redis, or refactoring synchronous code to be asynchronous. Finally, I run load tests to validate that the changes resolved the performance issue under simulated traffic.
+2026-08-22 14:19:19 [INFO] core.interviewer: --------------------------------------------------
+2026-08-22 14:19:19 [INFO] core.interviewer:   >> Difficulty adjusted to: easy (rolling avg: 1.0)
+2026-08-22 14:19:19 [INFO] core.interviewer: 
+[Question 2/5 | Topic: api_design]
+2026-08-22 14:19:19 [INFO] core.interviewer: --------------------------------------------------
+2026-08-22 14:19:19 [INFO] core.interviewer:   [easy] What is REST? What makes an API RESTful?
+2026-08-22 14:48:57 [INFO] core.evaluator: Gemini API configured (key present)
+2026-08-22 14:48:57 [INFO] core.evaluator: Primary model  : gemini-3.5-flash
+2026-08-22 14:48:57 [INFO] core.evaluator: Fallback chain : gemini-3.6-flash -> gemini-3.1-flash-lite -> gemini-flash-latest -> gemini-pro-latest
+2026-08-22 14:48:57 [INFO] __main__: Loading model...
+2026-08-22 14:49:06 [DEBUG] httpcore.connection: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=120 socket_options=None
+2026-08-22 14:49:06 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x00000242D01B5940>
+2026-08-22 14:49:06 [DEBUG] httpcore.connection: start_tls.started ssl_context=<ssl.SSLContext object at 0x00000242D0133650> server_hostname='generativelanguage.googleapis.com' timeout=120
+2026-08-22 14:49:06 [DEBUG] httpcore.connection: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x00000242D00DB750>
+2026-08-22 14:49:06 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-22 14:49:06 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-22 14:49:06 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-22 14:49:06 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-22 14:49:06 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-22 14:49:07 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'X-Gemini-Service-Tier', b'standard'), (b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sat, 22 Aug 2026 09:19:08 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=1451'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+2026-08-22 14:49:07 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-08-22 14:49:07 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-22 14:49:07 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-22 14:49:07 [DEBUG] httpcore.http11: response_closed.started
+2026-08-22 14:49:07 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-22 14:49:07 [DEBUG] httpcore.connection: close.started
+2026-08-22 14:49:07 [DEBUG] httpcore.connection: close.complete
+2026-08-22 14:49:07 [INFO] core.evaluator: Gemini API warmed up successfully (active model: gemini-3.5-flash)
+2026-08-22 14:49:07 [INFO] __main__: Ready!
+
+2026-08-22 14:49:25 [INFO] backend.app.domains.registry: Loaded domain: marketing (Marketing)
+2026-08-22 14:49:25 [INFO] backend.app.domains.registry: Loaded domain: software_engineering (Software Engineering)
+2026-08-22 14:49:25 [INFO] backend.app.domains.registry: Loaded domain: finance (Finance)
+2026-08-22 14:49:25 [INFO] backend.app.domains.registry: Loaded domain: hr (Human Resources)
+2026-08-22 14:49:25 [INFO] backend.app.domains.registry: Loaded domain: sales (Sales)
+2026-08-22 14:49:25 [INFO] backend.app.domains.registry: Domain registry loaded: 5 domains
+2026-08-22 14:49:25 [DEBUG] core.domain_bridge: Domain registry loaded into core bridge
+2026-08-22 14:49:25 [INFO] __main__: Available domains:
+2026-08-22 14:49:25 [INFO] __main__:   [1] Marketing — Digital marketing, branding, analytics, social media, and campaign strategy
+2026-08-22 14:49:25 [INFO] __main__:   [2] Software Engineering — DSA, system design, OOP, databases, APIs, and software architecture
+2026-08-22 14:49:25 [INFO] __main__:   [3] Finance — Valuation, accounting, markets, financial modeling, and analysis
+2026-08-22 14:49:25 [INFO] __main__:   [4] Human Resources — Recruitment, employee relations, labor law, L&D, and organizational development
+2026-08-22 14:49:25 [INFO] __main__:   [5] Sales — Pipeline management, negotiation, CRM, cold outreach, and closing
+2026-08-22 14:49:25 [INFO] __main__: Domain: software_engineering
+
+2026-08-22 14:49:25 [INFO] __main__: Select mode:
+2026-08-22 14:49:25 [INFO] __main__:   [1] Mock Interview — Full scoring, time limits, prescreening
+2026-08-22 14:49:25 [INFO] __main__:   [2] Practice (Warmup) — Coaching tips, no strict limits
+2026-08-22 14:49:25 [INFO] __main__: Mode: warmup
+
+2026-08-22 14:49:25 [INFO] __main__: 
+2026-08-22 14:49:25 [INFO] __main__: Do you want to upload a resume? (y/n)
+2026-08-22 14:49:25 [INFO] __main__: Do you want to simulate a company pre-screening? (y/n)
+2026-08-22 14:49:41 [INFO] core.state: Created new session: 20260822_144941_7dddd328
+2026-08-22 14:49:41 [INFO] core.interviewer: 
+2026-08-22 14:49:41 [INFO] core.interviewer: ==================================================
+2026-08-22 14:49:41 [INFO] core.interviewer:          PRACTICE SESSION (WARMUP)
+2026-08-22 14:49:41 [INFO] core.interviewer: ==================================================
+2026-08-22 14:49:41 [INFO] core.interviewer: 
+2026-08-22 14:49:41 [INFO] core.interviewer:   [Warmup Mode] Take your time. Focus on structuring your thoughts.
+2026-08-22 14:49:41 [INFO] core.interviewer:   Scores and time limits are relaxed. Coaching tips are shown after each answer.
+2026-08-22 14:49:41 [INFO] core.interviewer: 
+2026-08-22 14:49:41 [INFO] core.interviewer:   Candidate level  : unknown
+2026-08-22 14:49:41 [INFO] core.interviewer:   Questions        : 5
+2026-08-22 14:49:41 [INFO] core.interviewer:   LLM personalized : 0
+2026-08-22 14:49:41 [INFO] core.interviewer:   Topic coverage   : 33%
+2026-08-22 14:49:41 [INFO] core.interviewer:   Max follow-ups   : 1 per question
+2026-08-22 14:49:41 [INFO] core.interviewer:   Adaptive difficulty: ON
+2026-08-22 14:49:41 [INFO] core.interviewer: 
+2026-08-22 14:49:41 [INFO] core.interviewer:   Type your answers below. Press Ctrl+C to exit early.
+2026-08-22 14:49:41 [INFO] core.interviewer: ==================================================
+2026-08-22 14:49:41 [INFO] core.interviewer: 
+[Question 1/5 | Topic: dsa]
+2026-08-22 14:49:41 [INFO] core.interviewer: --------------------------------------------------
+2026-08-22 14:49:41 [INFO] core.interviewer:   [easy] What is the difference between an array and a linked list? When would you use each?
+2026-08-22 14:49:59 [INFO] core.interviewer:   Evaluating...
+2026-08-22 14:49:59 [DEBUG] httpcore.connection: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=120 socket_options=None
+2026-08-22 14:50:00 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x00000242D1D70910>
+2026-08-22 14:50:00 [DEBUG] httpcore.connection: start_tls.started ssl_context=<ssl.SSLContext object at 0x00000242D1D37020> server_hostname='generativelanguage.googleapis.com' timeout=120
+2026-08-22 14:50:00 [DEBUG] httpcore.connection: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x00000242D1D18640>
+2026-08-22 14:50:00 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-22 14:50:00 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-22 14:50:00 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-22 14:50:00 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-22 14:50:00 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-22 14:50:07 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'X-Gemini-Service-Tier', b'standard'), (b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sat, 22 Aug 2026 09:20:07 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=7317'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+2026-08-22 14:50:07 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-08-22 14:50:07 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-22 14:50:07 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-22 14:50:07 [DEBUG] httpcore.http11: response_closed.started
+2026-08-22 14:50:07 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-22 14:50:07 [DEBUG] httpcore.connection: close.started
+2026-08-22 14:50:07 [DEBUG] httpcore.connection: close.complete
+2026-08-22 14:50:07 [INFO] core.interviewer:   [Router] Task 'evaluate_main' routed to gemini-3.5-flash (Latency: 7.92s, Tokens: 2163)
+2026-08-22 14:50:07 [INFO] core.interviewer: 
+2026-08-22 14:50:07 [INFO] core.interviewer:   Follow-up: In a real-world application, if we are frequently inserting elements into the middle of a collection, why might a dynamic array still outperform a linked list? Think about how modern CPU hardware interacts with memory.
+2026-08-22 14:50:17 [DEBUG] httpcore.connection: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=120 socket_options=None
+2026-08-22 14:50:17 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x00000242D1D18C30>
+2026-08-22 14:50:17 [DEBUG] httpcore.connection: start_tls.started ssl_context=<ssl.SSLContext object at 0x00000242D1D371D0> server_hostname='generativelanguage.googleapis.com' timeout=120
+2026-08-22 14:50:17 [DEBUG] httpcore.connection: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x00000242D1D327B0>
+2026-08-22 14:50:17 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-22 14:50:17 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-22 14:50:17 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-22 14:50:17 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-22 14:50:17 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-22 14:50:23 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'X-Gemini-Service-Tier', b'standard'), (b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sat, 22 Aug 2026 09:20:23 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=5970'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+2026-08-22 14:50:23 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-08-22 14:50:23 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-22 14:50:23 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-22 14:50:23 [DEBUG] httpcore.http11: response_closed.started
+2026-08-22 14:50:23 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-22 14:50:23 [DEBUG] httpcore.connection: close.started
+2026-08-22 14:50:23 [DEBUG] httpcore.connection: close.complete
+2026-08-22 14:50:23 [INFO] core.interviewer:   [Router] Task 'generate_followup' routed to gemini-3.5-flash (Latency: 6.56s, Tokens: 1095)
+2026-08-22 14:50:23 [INFO] core.interviewer:   Strengths: Correctly identifies the core memory layout differences (contiguous vs. pointer-based non-contiguous memory).; Accurately states the basic asymptotic time complexities (Big-O) for indexing and head insertion.
+2026-08-22 14:50:23 [INFO] core.interviewer:   Weaknesses: Misses critical real-world engineering factors such as CPU cache locality, which often makes arrays faster than linked lists in practice.; Oversimplifies linked list insertions by failing to mention that finding the insertion point itself takes O(n) time, unless you already have a reference to the node.; Does not mention the memory overhead associated with storing pointers/references in a linked list.
+2026-08-22 14:50:23 [INFO] core.interviewer:   Follow-up score: 9.00
+2026-08-22 14:50:23 [INFO] core.interviewer: --------------------------------------------------
+2026-08-22 14:50:23 [INFO] core.interviewer:   >> Difficulty adjusted to: easy (rolling avg: 7.2)
+2026-08-22 14:50:23 [INFO] core.interviewer: 
+[Question 2/5 | Topic: code_review]
+2026-08-22 14:50:23 [INFO] core.interviewer: --------------------------------------------------
+2026-08-22 14:50:23 [INFO] core.interviewer:   [easy] What do you look for when reviewing someone's code?
+2026-08-23 13:46:09 [INFO] core.evaluator: Gemini API configured (key present)
+2026-08-23 13:46:09 [INFO] core.evaluator: Primary model  : gemini-3.5-flash
+2026-08-23 13:46:09 [INFO] core.evaluator: Fallback chain : gemini-3.6-flash -> gemini-3.1-flash-lite -> gemini-flash-latest -> gemini-pro-latest
+2026-08-23 13:46:09 [INFO] __main__: Loading model...
+2026-08-23 13:46:10 [DEBUG] httpcore.connection: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=120 socket_options=None
+2026-08-23 13:46:10 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000010F1DE31FD0>
+2026-08-23 13:46:10 [DEBUG] httpcore.connection: start_tls.started ssl_context=<ssl.SSLContext object at 0x0000010F1DD7BDA0> server_hostname='generativelanguage.googleapis.com' timeout=120
+2026-08-23 13:46:10 [DEBUG] httpcore.connection: start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000010F1DD67D90>
+2026-08-23 13:46:10 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2026-08-23 13:46:10 [DEBUG] httpcore.http11: send_request_headers.complete
+2026-08-23 13:46:10 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2026-08-23 13:46:10 [DEBUG] httpcore.http11: send_request_body.complete
+2026-08-23 13:46:10 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2026-08-23 13:46:12 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'X-Gemini-Service-Tier', b'standard'), (b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Sun, 23 Aug 2026 08:16:12 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=1336'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+2026-08-23 13:46:12 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-08-23 13:46:12 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2026-08-23 13:46:12 [DEBUG] httpcore.http11: receive_response_body.complete
+2026-08-23 13:46:12 [DEBUG] httpcore.http11: response_closed.started
+2026-08-23 13:46:12 [DEBUG] httpcore.http11: response_closed.complete
+2026-08-23 13:46:12 [DEBUG] httpcore.connection: close.started
+2026-08-23 13:46:12 [DEBUG] httpcore.connection: close.complete
+2026-08-23 13:46:12 [INFO] core.evaluator: Gemini API warmed up successfully (active model: gemini-3.5-flash)
+2026-08-23 13:46:12 [INFO] __main__: Ready!
+
+2026-08-23 13:46:27 [INFO] backend.app.domains.registry: Loaded domain: marketing (Marketing)
+2026-08-23 13:46:27 [INFO] backend.app.domains.registry: Loaded domain: software_engineering (Software Engineering)
+2026-08-23 13:46:27 [INFO] backend.app.domains.registry: Loaded domain: finance (Finance)
+2026-08-23 13:46:27 [INFO] backend.app.domains.registry: Loaded domain: hr (Human Resources)
+2026-08-23 13:46:27 [INFO] backend.app.domains.registry: Loaded domain: sales (Sales)
+2026-08-23 13:46:27 [INFO] backend.app.domains.registry: Domain registry loaded: 5 domains
+2026-08-23 13:46:27 [DEBUG] core.domain_bridge: Domain registry loaded into core bridge
+2026-08-23 13:46:27 [INFO] __main__: Available domains:
+2026-08-23 13:46:27 [INFO] __main__:   [1] Marketing — Digital marketing, branding, analytics, social media, and campaign strategy
+2026-08-23 13:46:27 [INFO] __main__:   [2] Software Engineering — DSA, system design, OOP, databases, APIs, and software architecture
+2026-08-23 13:46:27 [INFO] __main__:   [3] Finance — Valuation, accounting, markets, financial modeling, and analysis
+2026-08-23 13:46:27 [INFO] __main__:   [4] Human Resources — Recruitment, employee relations, labor law, L&D, and organizational development
+2026-08-23 13:46:27 [INFO] __main__:   [5] Sales — Pipeline management, negotiation, CRM, cold outreach, and closing
+2026-08-23 13:46:27 [INFO] __main__: Domain: software_engineering
+
+2026-08-23 13:46:27 [INFO] __main__: Select mode:
+2026-08-23 13:46:27 [INFO] __main__:   [1] Mock Interview — Full scoring, time limits, prescreening
+2026-08-23 13:46:27 [INFO] __main__:   [2] Practice (Warmup) — Coaching tips, no strict limits
+2026-08-23 13:46:27 [INFO] __main__: Mode: warmup
+
+2026-08-23 13:46:27 [INFO] __main__: 
+2026-08-23 13:46:27 [INFO] __main__: Do you want to upload a resume? (y/n)
+2026-08-23 13:46:27 [INFO] __main__: Do you want to simulate a company pre-screening? (y/n)
+2026-08-23 13:46:38 [INFO] core.state: Created new session: 20260823_134638_de9a3167
+2026-08-23 13:46:38 [DEBUG] filelock: Attempting to acquire lock 1164448824160 on R:\IMP\interview v2\sessions\session_20260823_134638_de9a3167.json.lock
+2026-08-23 13:46:38 [DEBUG] filelock: Lock 1164448824160 acquired on R:\IMP\interview v2\sessions\session_20260823_134638_de9a3167.json.lock
+2026-08-23 13:46:38 [DEBUG] filelock: Attempting to release lock 1164448824160 on R:\IMP\interview v2\sessions\session_20260823_134638_de9a3167.json.lock
+2026-08-23 13:46:38 [DEBUG] filelock: Lock 1164448824160 released on R:\IMP\interview v2\sessions\session_20260823_134638_de9a3167.json.lock
+2026-08-23 13:46:38 [DEBUG] core.state: Session 20260823_134638_de9a3167 saved to R:\IMP\interview v2\sessions\session_20260823_134638_de9a3167.json
+2026-08-23 13:46:38 [INFO] core.interviewer: 
+2026-08-23 13:46:38 [INFO] core.interviewer: ==================================================
+2026-08-23 13:46:38 [INFO] core.interviewer:          PRACTICE SESSION (WARMUP)
+2026-08-23 13:46:38 [INFO] core.interviewer: ==================================================
+2026-08-23 13:46:38 [INFO] core.interviewer: 
+2026-08-23 13:46:38 [INFO] core.interviewer:   [Warmup Mode] Take your time. Focus on structuring your thoughts.
+2026-08-23 13:46:38 [INFO] core.interviewer:   Scores and time limits are relaxed. Coaching tips are shown after each answer.
+2026-08-23 13:46:38 [INFO] core.interviewer: 
+2026-08-23 13:46:38 [INFO] core.interviewer:   Questions        : 5
+2026-08-23 13:46:38 [INFO] core.interviewer:   Type your answers below. Press Ctrl+C to exit early.
+2026-08-23 13:46:38 [INFO] core.interviewer: ==================================================
+2026-08-23 13:46:38 [INFO] core.interviewer: 
+[Question 1/5 | Topic: data_structures]
+2026-08-23 13:46:38 [INFO] core.interviewer: --------------------------------------------------
+2026-08-23 13:46:38 [INFO] core.interviewer:   [medium] What is a hash map? How does it handle collisions?

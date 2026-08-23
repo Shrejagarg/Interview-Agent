@@ -276,8 +276,9 @@ class TestGetQuestionSet:
         }
         result = get_question_set(resume, question_count=3)
         history = load_asked_history()
+        history_strs = {str(h) for h in history}
         for q in result["questions"]:
-            assert q["id"] in history
+            assert str(q["id"]) in history_strs
 
     @patch("core.question_engine.generate_llm_questions", return_value=[])
     def test_no_llm_fallback(self, mock_llm):

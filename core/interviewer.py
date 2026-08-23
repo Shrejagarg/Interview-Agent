@@ -1,8 +1,8 @@
 import time
 import logging
-from .evaluator import evaluate_main, evaluate_followup, merge, pre_screen_answer
-from .state import update_topic_score, add_warning, add_seriousness_flag, record_answer
-from .question_engine import get_question_set, AdaptiveDifficultyManager
+from .engine import InterviewEngine
+from .state import save_session, add_warning, add_seriousness_flag, record_answer
+from .evaluator import evaluate_followup
 from .config import get_config
 
 logger = logging.getLogger(__name__)
@@ -27,15 +27,16 @@ def _print_feedback(main_eval, follow_score, final_score, show_feedback, show_sc
     if not show_feedback:
         return
 
-    logger.info("")
-    logger.info("  Score: %.2f", final_score)
-
     if show_score:
-        logger.info("  Relevance: %d  Clarity: %d  Creativity: %d  Communication: %d",
-                     main_eval.get("relevance", 0),
-                     main_eval.get("clarity", 0),
-                     main_eval.get("creativity", 0),
-                     main_eval.get("communication", 0))
+        logger.info("  Score: %.2f", final_score)
+        
+        # Print whatever dimension scores exist (ignoring metadata keys)
+        skip_keys = {"overall_score", "strengths", "weaknesses", "follow_up", "is_serious", "context_aware", "reason", "notes", "improved", "score"}
+        dims = [f"{k.capitalize()}: {v}" for k, v in main_eval.items() 
+                if k not in skip_keys and not k.startswith("_")]
+        
+        if dims:
+            logger.info("  %s", "  ".join(dims))
 
     strengths = main_eval.get("strengths", [])
     weaknesses = main_eval.get("weaknesses", [])
@@ -121,7 +122,10 @@ def _handle_followup(state, question_data, main_eval, max_followups, main_score=
         logger.info("  >> %s", f_msg)
     else:
         try:
-            f_eval = evaluate_followup(f_ans, main_score=main_score)
+            f_eval = evaluate_followup(f_ans, main_score=main_score, difficulty=question_data.get("difficulty"))
+            tel = f_eval.get("_telemetry", {})
+            if tel:
+                logger.info("  [Router] Task 'generate_followup' routed to %s (Latency: %ss, Tokens: %s)", tel.get('model'), tel.get('latency'), tel.get('tokens', {}).get('total', 0))
         except ConnectionError as e:
             logger.error("  Follow-up evaluation failed: %s", e)
         else:
@@ -150,199 +154,94 @@ def _should_ask_followup(main_score, follow_up_text, experience_level):
 
 
 def run_interview(state, resume_data=None, domain_slug="marketing"):
-    max_followups = cfg["interview"]["max_followups_per_question"]
-    question_count = cfg["interview"]["question_count"]
+    engine = InterviewEngine()
+    mode = state.get("mode", "mock")
+    
+    state = engine.start_interview(state, resume_data=resume_data)
+    save_session(state)
+    
     show_feedback = cfg["interview"].get("show_feedback", True)
-    show_score = cfg["interview"].get("show_score_after_answer", True)
-    use_context = cfg["interview"].get("use_context_window", True)
-    context_window_size = cfg["interview"].get("context_window_size", 2)
-    prescreen_enabled = cfg["interview"].get("prescreening_enabled", True)
-    adaptive_enabled = cfg["question_engine"].get("adaptive_difficulty", False)
-
-    question_set = get_question_set(resume_data or {}, question_count=question_count, domain_slug=domain_slug)
-    questions = question_set["questions"]
-    total = len(questions)
-
-    experience_level = question_set.get("experience_level", "unknown")
-    topics_covered = question_set.get("topics_covered", 0)
-    llm_count = question_set.get("llm_generated", 0)
-
-    adaptive_mgr = None
-    if adaptive_enabled:
-        base_dist = cfg["question_engine"]["difficulty_distribution"].get(
-            experience_level,
-            cfg["question_engine"]["difficulty_distribution"]["unknown"]
-        )
-        window_size = cfg["question_engine"].get("adaptive_window_size", 2)
-        adaptive_mgr = AdaptiveDifficultyManager(base_dist, window_size=window_size)
+    show_score = (mode == "mock") and cfg["interview"].get("show_score_after_answer", True)
 
     logger.info("")
     logger.info("=" * 50)
-    logger.info("           INTERVIEW SESSION")
+    if mode == "warmup":
+        logger.info("         PRACTICE SESSION (WARMUP)")
+    else:
+        logger.info("           INTERVIEW SESSION")
     logger.info("=" * 50)
     logger.info("")
-    logger.info("  Candidate level  : %s", experience_level)
-    logger.info("  Questions        : %d", total)
-    logger.info("  LLM personalized : %d", llm_count)
-    logger.info("  Topic coverage   : %.0f%%", topics_covered * 100)
-    logger.info("  Max follow-ups   : %d per question", max_followups)
-    if adaptive_enabled:
-        logger.info("  Adaptive difficulty: ON")
-    logger.info("")
+    if mode == "warmup":
+        logger.info("  [Warmup Mode] Take your time. Focus on structuring your thoughts.")
+        logger.info("  Scores and time limits are relaxed. Coaching tips are shown after each answer.")
+        logger.info("")
+        
+    logger.info("  Questions        : %d", state["total_questions"])
     logger.info("  Type your answers below. Press Ctrl+C to exit early.")
     logger.info("=" * 50)
 
-    conversation_history = []
-    question_index = 0
-    remaining_questions = list(questions)
-
-    for i in range(total):
-        if not remaining_questions:
+    while state["status"] in ("in_progress", "awaiting_followup"):
+        q_data = engine.get_next_question(state)
+        if not q_data:
             break
 
-        if adaptive_mgr and i > 0:
-            next_diff = adaptive_mgr.get_next_difficulty()
-            matched = [q for q in remaining_questions if q.get("difficulty") == next_diff]
-            if matched:
-                q = matched[0]
-                remaining_questions.remove(q)
-                if i > 0 and adaptive_mgr._scores:
-                    avg = sum(adaptive_mgr._scores) / len(adaptive_mgr._scores)
-                    logger.info("  >> Difficulty adjusted to: %s (rolling avg: %.1f)", next_diff, avg)
-            else:
-                q = remaining_questions.pop(0)
-        else:
-            q = remaining_questions.pop(0)
+        if q_data["type"] == "main":
+            q = q_data["question_data"]
+            _print_progress(state["question_index"], state["total_questions"], q.get("topic", "unknown"))
+            logger.info("  [%s] %s", q.get("difficulty", "?"), q["question"])
 
-        question_index = i + 1
-        topic = q.get("topic", "unknown")
-        difficulty = q.get("difficulty", "?")
+            try:
+                start_time = time.time()
+                ans = input("\n  Your answer: ")
+                answer_time = round(time.time() - start_time, 2)
+            except (EOFError, KeyboardInterrupt):
+                logger.info("\n\n  >> Interview interrupted by user.")
+                break
 
-        _print_progress(question_index, total, topic)
-        logger.info("  [%s] %s", difficulty, q["question"])
+            logger.info("  Evaluating...")
+            try:
+                state = engine.submit_answer(state, ans, answer_time)
+                save_session(state)
+            except ValueError as e:
+                logger.error("Error: %s", e)
+                break
 
-        try:
-            start_time = time.time()
-            ans = input("\n  Your answer: ")
-            answer_time = round(time.time() - start_time, 2)
-        except (EOFError, KeyboardInterrupt):
-            logger.info("\n\n  >> Interview interrupted by user.")
-            break
+            # If it didn't transition to followup, we print feedback now
+            if state["status"] != "awaiting_followup":
+                last_ans = state["answers"][-1] if state["answers"] else {}
+                eval_data = last_ans.get("evaluation", {})
+                if not eval_data.get("_skipped") and not eval_data.get("_prescreened") and not eval_data.get("_evaluation_error"):
+                    _print_feedback(eval_data, None, eval_data.get("overall_score", 0), show_feedback, show_score)
+                    ideal = eval_data.get("ideal_answer", "")
+                    if ideal and mode == "warmup":
+                        logger.info("\n  Coaching: Here is what a strong answer looks like:\n  %s", ideal)
+                    elif ideal and show_feedback and eval_data.get("overall_score", 0) < 6:
+                        logger.info("\n  Coaching tip: %s", ideal)
 
-        valid, msg = validate_answer(ans)
-        if not valid:
-            _handle_answer_skip(state, q, ans, answer_time, msg)
-            logger.info("-" * 50)
-            continue
-
-        if prescreen_enabled:
-            prescreen = pre_screen_answer(ans, q["question"])
-            if not prescreen["pass"]:
-                logger.info("  >> Answer flagged as insufficient. Moving on.")
-                auto_eval = {
-                    "relevance": 1, "clarity": 1, "creativity": 1, "communication": 1,
-                    "overall_score": prescreen["auto_score"],
-                    "strengths": [], "weaknesses": [prescreen["reason"]],
-                    "follow_up": "", "is_serious": False,
-                    "_prescreened": True, "_prescreen_reason": prescreen["reason"],
-                }
-                auto_eval["overall_score"] = prescreen["auto_score"]
-                update_topic_score(state, topic, prescreen["auto_score"])
-                add_seriousness_flag(state, {
-                    "question": q["question"],
-                    "is_serious": False,
-                    "_prescreen_reason": prescreen["reason"],
-                })
-                record_answer(state, q["question"], ans, auto_eval, topic, {
-                    "answer_time_seconds": answer_time, "eval_time_seconds": 0
-                })
-                if adaptive_mgr:
-                    adaptive_mgr.update(prescreen["auto_score"])
-                logger.info("-" * 50)
-                continue
-
-        logger.info("  Evaluating...")
-        eval_start = time.time()
-
-        ctx = None
-        if use_context and conversation_history:
-            ctx = conversation_history[-context_window_size:]
-
-        try:
-            main_eval = evaluate_main(q["question"], ans, context=ctx, domain_slug=domain_slug)
-        except ConnectionError as e:
-            _handle_evaluation_error(state, q, ans, answer_time, e)
-            logger.info("-" * 50)
-            continue
-
-        eval_time = round(time.time() - eval_start, 2)
-
-        if not main_eval.get("is_serious", True):
-            already_flagged = any(
-                f["question"] == q["question"] for f in state["seriousness_flags"]
-            )
-            if not already_flagged:
-                add_warning(state, "Unserious answer detected")
-                add_seriousness_flag(state, {
-                    "question": q["question"],
-                    "is_serious": False
-                })
-
-        main_score = main_eval.get("overall_score", 0)
-
-        follow_score, follow_answer, interrupted = _handle_followup(
-            state, q, main_eval, max_followups,
-            main_score=main_score, experience_level=experience_level,
-        )
-        if interrupted:
-            logger.info("\n  >> Interview interrupted by user.")
-            break
-
-        final_score = merge(main_score, follow_score)
-        update_topic_score(state, topic, final_score)
-
-        conversation_history.append({
-            "question": q["question"],
-            "answer": ans,
-            "score": final_score,
-        })
-
-        followup_data = None
-        if follow_answer:
-            followup_data = {"question": main_eval.get("follow_up", ""), "answer": follow_answer}
-
-        skip_record = q.get("_skip_record", {})
-        rec_eval = dict(main_eval)
-        if skip_record:
-            rec_eval.update(skip_record)
-
-        record_answer(state, q["question"], ans, rec_eval, topic, {
-            "answer_time_seconds": answer_time,
-            "eval_time_seconds": eval_time
-        }, followup=followup_data)
-
-        if adaptive_mgr:
-            adaptive_mgr.update(final_score)
-
-        _print_feedback(main_eval, follow_score, final_score, show_feedback, show_score)
-        logger.info("-" * 50)
-
-    from .state import get_average, finalize_topics, export_session
-    finalize_topics(state)
-    avg = get_average(state)
-    state["_avg"] = avg
-
-    strong_thresh = cfg["verdicts"]["strong_threshold"]
-    avg_thresh = cfg["verdicts"]["average_threshold"]
-    if avg >= strong_thresh:
-        state["verdict"] = "Strong"
-    elif avg >= avg_thresh:
-        state["verdict"] = "Average"
-    else:
-        state["verdict"] = "Needs Improvement"
-
+        elif q_data["type"] == "followup":
+            logger.info("")
+            logger.info("  Follow-up: %s", q_data["question"])
+            try:
+                f_ans = input("  Follow-up answer: ")
+            except (EOFError, KeyboardInterrupt):
+                logger.info("\n\n  >> Interview interrupted by user.")
+                break
+                
+            logger.info("  Evaluating...")
+            try:
+                state = engine.submit_followup(state, f_ans)
+                save_session(state)
+            except ValueError as e:
+                logger.error("Error: %s", e)
+                break
+                
+            last_ans = state["answers"][-1] if state["answers"] else {}
+            eval_data = last_ans.get("evaluation", {})
+            f_data = last_ans.get("followup", {})
+            _print_feedback(eval_data, None, eval_data.get("overall_score", 0), show_feedback, show_score)
+            
     _print_verdict(state, len(state["answers"]))
-
+    from .state import export_session
     filepath = export_session(state)
     logger.info("\nSession saved to: %s", filepath)
 

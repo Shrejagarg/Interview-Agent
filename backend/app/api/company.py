@@ -39,65 +39,48 @@ def _get_session_detail(session_id: str) -> Dict[str, Any]:
         return None
 
     registry = get_registry()
-    domain = registry.get(session["domain_slug"])
+    domain = registry.get(session["domain"])
 
-    topic_buckets: Dict[str, List[int]] = {}
-    for a in session["answers"]:
-        topic = a.get("topic", "unknown")
-        score = a.get("evaluation", {}).get("overall_score", 0)
-        topic_buckets.setdefault(topic, []).append(score)
+    # Engine state should be finalized before viewing details
+    if session["status"] == "completed" and "_avg" not in session:
+        from core.state import finalize_topics, get_average
+        finalize_topics(session)
+        session["_avg"] = get_average(session)
 
-    topic_scores = {}
-    for topic, scores in topic_buckets.items():
-        topic_scores[topic] = round(sum(scores) / len(scores), 1)
-
-    overall = 0
-    if session["answers"]:
-        overall = round(
-            sum(a.get("evaluation", {}).get("overall_score", 0) for a in session["answers"])
-            / len(session["answers"]),
-            1,
-        )
-
-    if overall >= 75:
-        verdict = "strong"
-    elif overall >= 50:
-        verdict = "moderate"
-    elif overall >= 25:
-        verdict = "weak"
-    else:
-        verdict = "very_weak"
+    topic_scores = session.get("topic_scores", {})
+    overall = session.get("_avg", 0)
+    verdict = session.get("verdict", "Unknown")
 
     recommendations = []
-    if domain:
-        for topic, avg in topic_scores.items():
-            if avg < 60:
-                rec = domain.get_recommendation(topic, avg)
-                recommendations.append({"topic": topic, "score": avg, "recommendation": rec})
+    # (Optional) Domain recommendations could go here if still wanted
 
     per_answer = []
-    for a in session["answers"]:
+    for a in session.get("answers", []):
         per_answer.append({
-            "question": a["question_text"],
-            "topic": a["topic"],
-            "difficulty": a["difficulty"],
-            "answer": a["answer"],
-            "score": a["evaluation"]["overall_score"],
-            "strengths": a["evaluation"].get("strengths", []),
-            "weaknesses": a["evaluation"].get("weaknesses", []),
+            "question": a.get("question"),
+            "topic": a.get("topic"),
+            "difficulty": a.get("evaluation", {}).get("difficulty", "?"),
+            "answer": a.get("answer"),
+            "score": a.get("evaluation", {}).get("overall_score", 0),
+            "strengths": a.get("evaluation", {}).get("strengths", []),
+            "weaknesses": a.get("evaluation", {}).get("weaknesses", []),
         })
+        
+    from core.state import get_integrity_score
+    integrity = get_integrity_score(session)
 
     return {
-        "session_id": session["id"],
-        "domain": session["domain_slug"],
-        "experience_level": session["experience_level"],
+        "session_id": session["session_id"],
+        "domain": session["domain"],
+        "experience_level": session.get("role_context", {}).get("experience_level", "unknown"),
         "status": session["status"],
         "user_id": session.get("user_id"),
         "started_at": session["started_at"],
         "finished_at": session.get("finished_at"),
-        "questions_total": len(session["questions"]),
-        "answers_submitted": len(session["answers"]),
+        "questions_total": session.get("total_questions", 0),
+        "answers_submitted": len(session.get("answers", [])),
         "overall_score": overall,
+        "integrity_score": integrity,
         "topic_scores": topic_scores,
         "verdict": verdict,
         "recommendations": recommendations,
@@ -133,7 +116,7 @@ def get_dashboard(user: UserProfile = Depends(require_role("company"))):
 
     domain_breakdown: Dict[str, int] = {}
     for s in sessions:
-        slug = s["domain_slug"]
+        slug = s["domain"]
         domain_breakdown[slug] = domain_breakdown.get(slug, 0) + 1
 
     return {
@@ -154,7 +137,7 @@ def list_company_sessions(
     sessions = _get_company_sessions(user.user_id)
 
     if domain:
-        sessions = [s for s in sessions if s["domain_slug"] == domain]
+        sessions = [s for s in sessions if s["domain"] == domain]
     if status:
         sessions = [s for s in sessions if s["status"] == status]
 
@@ -167,14 +150,14 @@ def list_company_sessions(
                 1,
             )
         result.append({
-            "id": s["id"],
-            "domain": s["domain_slug"],
-            "experience_level": s["experience_level"],
+            "id": s["session_id"],
+            "domain": s["domain"],
+            "experience_level": s.get("role_context", {}).get("experience_level", "unknown"),
             "status": s["status"],
             "score": session_avg,
-            "started_at": s["started_at"],
+            "started_at": s.get("started_at", ""),
             "finished_at": s.get("finished_at"),
-            "answers": len(s["answers"]),
+            "answers": len(s.get("answers", [])),
             "user_id": s.get("user_id"),
         })
 
@@ -223,7 +206,7 @@ def list_candidates(user: UserProfile = Depends(require_role("company"))):
                 sum(a["evaluation"]["overall_score"] for a in s["answers"]) / len(s["answers"]),
                 1,
             )
-            slug = s["domain_slug"]
+            slug = s["domain"]
             current_best = candidates[uid]["domain_scores"].get(slug, 0)
             if session_avg > current_best:
                 candidates[uid]["domain_scores"][slug] = session_avg

@@ -1,4 +1,4 @@
-from .state import finalize_topics, get_average, export_session
+from .state import finalize_topics, get_average, get_integrity_score, export_session
 from .config import get_config
 from collections import Counter
 import logging
@@ -88,10 +88,12 @@ def generate_report(state):
     answers = state["answers"]
     total = len(answers)
 
-    strong_thresh = cfg["verdicts"]["strong_threshold"]
-    avg_thresh = cfg["verdicts"]["average_threshold"]
+    role_ctx = state.get("role_context", {})
+    pass_threshold = role_ctx.get("pass_threshold", cfg["verdicts"]["strong_threshold"])
+    avg_thresh = pass_threshold - 2.0
+    passed = avg >= pass_threshold
 
-    if avg >= strong_thresh:
+    if avg >= pass_threshold:
         verdict = "Strong"
     elif avg >= avg_thresh:
         verdict = "Average"
@@ -100,6 +102,7 @@ def generate_report(state):
 
     state["verdict"] = verdict
 
+    integrity = get_integrity_score(state)
     dim_avgs = _get_dimension_averages(answers)
     top_strengths, top_weaknesses = _get_strengths_weaknesses(answers)
     timing = _get_timing_summary(answers)
@@ -107,29 +110,38 @@ def generate_report(state):
     seriousness_count = len(state["seriousness_flags"])
     seriousness_pct = round(seriousness_count / total * 100, 1) if total > 0 else 0
 
+    role_name = role_ctx.get("role_name", "General Candidate")
+    integrity_status = "High" if integrity >= 90 else ("Warning" if integrity >= 70 else "Critical")
+
     logger.info("\n" + "=" * 50)
     logger.info("           INTERVIEW REPORT")
     logger.info("=" * 50)
 
     logger.info("")
     logger.info("Session ID   : %s", state['session_id'])
+    logger.info("Role         : %s", role_name)
     logger.info("Date         : %s", state['started_at'][:10])
     logger.info("Questions    : %d (skipped: %d)", total, skipped)
+    logger.info("")
+    logger.info("Overall Score: %.2f / 10", avg)
+    logger.info("Target Score : %.2f / 10", pass_threshold)
+    logger.info("Passed       : %s", "YES" if passed else "NO")
+    logger.info("Integrity    : %d/100 (%s)", integrity, integrity_status)
 
     logger.info("")
     logger.info("--- SCORES ---")
     logger.info("%-20s %6s", "Topic", "Score")
     logger.info("-" * 28)
     for topic, score in state["topic_scores"].items():
-        marker = " *" if score >= strong_thresh else (" !" if score <= avg_thresh else "")
+        marker = " *" if score >= pass_threshold else (" !" if score <= avg_thresh else "")
         logger.info("%-20s %6.2f%s", topic, score, marker)
     logger.info("-" * 28)
     logger.info("%-20s %6.2f", "Average", avg)
 
     logger.info("")
     logger.info("Verdict: %s", verdict)
-    if avg >= strong_thresh:
-        logger.info("  Candidate shows strong marketing knowledge.")
+    if avg >= pass_threshold:
+        logger.info("  Candidate meets the target threshold for %s.", role_name)
     elif avg >= avg_thresh:
         logger.info("  Candidate shows basic understanding, room to grow.")
     else:
@@ -177,6 +189,9 @@ def generate_report(state):
 
     state["report_summary"] = {
         "average_score": avg,
+        "integrity_score": integrity,
+        "pass_threshold": pass_threshold,
+        "passed": passed,
         "verdict": verdict,
         "dimension_averages": dim_avgs,
         "top_strengths": top_strengths,

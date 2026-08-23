@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from backend.app.domains import get_registry
-from backend.app.api.interviews import _sessions, _compute_session_summary
+from backend.app.api.interviews import _sessions
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -30,20 +30,23 @@ def list_analytics_sessions(domain: Optional[str] = None):
     """List all sessions with analytics summaries."""
     results = []
     for sid, s in _sessions.items():
-        if domain and s["domain_slug"] != domain:
+        if domain and s["domain"] != domain:
             continue
-        registry = get_registry()
-        d = registry.get(s["domain_slug"])
-        summary = _compute_session_summary(s, d)
+            
+        if s["status"] == "completed" and "_avg" not in s:
+            from core.state import finalize_topics, get_average
+            finalize_topics(s)
+            s["_avg"] = get_average(s)
+
         results.append({
             "session_id": sid,
-            "domain": s["domain_slug"],
+            "domain": s["domain"],
             "status": s["status"],
-            "overall_score": summary["overall_score"],
-            "topic_scores": summary["topic_scores"],
-            "verdict": summary["verdict"],
-            "questions_total": len(s["questions"]),
-            "answers_submitted": len(s["answers"]),
+            "overall_score": s.get("_avg", 0),
+            "topic_scores": s.get("topic_scores", {}),
+            "verdict": s.get("verdict", "Unknown"),
+            "questions_total": s.get("total_questions", 0),
+            "answers_submitted": len(s.get("answers", [])),
             "started_at": s["started_at"],
             "finished_at": s.get("finished_at"),
         })
@@ -63,14 +66,17 @@ def compare_sessions(session_ids: str):
         s = _sessions.get(sid)
         if not s:
             raise HTTPException(status_code=404, detail=f"Session '{sid}' not found")
-        d = registry.get(s["domain_slug"])
-        summary = _compute_session_summary(s, d)
+        if s["status"] == "completed" and "_avg" not in s:
+            from core.state import finalize_topics, get_average
+            finalize_topics(s)
+            s["_avg"] = get_average(s)
+
         summaries.append({
             "session_id": sid,
-            "domain": s["domain_slug"],
-            "overall_score": summary["overall_score"],
-            "topic_scores": summary["topic_scores"],
-            "verdict": summary["verdict"],
+            "domain": s["domain"],
+            "overall_score": s.get("_avg", 0),
+            "topic_scores": s.get("topic_scores", {}),
+            "verdict": s.get("verdict", "Unknown"),
         })
 
     sorted_by_score = sorted(summaries, key=lambda x: x["overall_score"], reverse=True)
@@ -104,14 +110,17 @@ def get_recommendations(session_id: str):
         raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found")
 
     registry = get_registry()
-    domain = registry.get(session["domain_slug"])
-    summary = _compute_session_summary(session, domain)
+    domain = registry.get(session["domain"])
+    if session["status"] == "completed" and "_avg" not in session:
+        from core.state import finalize_topics, get_average
+        finalize_topics(session)
+        session["_avg"] = get_average(session)
 
     return {
         "session_id": session_id,
-        "domain": session["domain_slug"],
-        "overall_score": summary["overall_score"],
-        "verdict": summary["verdict"],
-        "topic_scores": summary["topic_scores"],
-        "recommendations": summary["recommendations"],
+        "domain": session["domain"],
+        "overall_score": session.get("_avg", 0),
+        "verdict": session.get("verdict", "Unknown"),
+        "topic_scores": session.get("topic_scores", {}),
+        "recommendations": [], # Defer recommendations to core logic later
     }

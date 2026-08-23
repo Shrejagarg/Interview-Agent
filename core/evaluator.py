@@ -5,6 +5,7 @@ import logging
 import os
 import string
 from .config import get_config
+from .model_router import ModelRouter
 
 logger = logging.getLogger(__name__)
 
@@ -211,7 +212,17 @@ def _call_gemini_model(messages, model_name):
         raise ConnectionError("Gemini returned no candidates")
 
     text = candidates[0]["content"]["parts"][0]["text"]
-    return {"message": {"content": text}}
+    usage = data.get("usageMetadata", {})
+    return {
+        "message": {"content": text},
+        "metadata": {
+            "tokens": {
+                "prompt": usage.get("promptTokenCount", 0),
+                "candidates": usage.get("candidatesTokenCount", 0),
+                "total": usage.get("totalTokenCount", 0)
+            }
+        }
+    }
 
 
 def _call_ollama(messages):
@@ -219,7 +230,7 @@ def _call_ollama(messages):
     return ollama.chat(model=OLLAMA_MODEL, messages=messages)
 
 
-def _call_llm(messages):
+def _call_llm(messages, task_type=None, difficulty=None):
     global MODEL_NAME
 
     if PROVIDER != "gemini":
@@ -227,7 +238,11 @@ def _call_llm(messages):
         last_error = None
         for attempt in range(1, MAX_RETRIES + 1):
             try:
-                return _call_ollama(messages)
+                start_t = time.time()
+                res = _call_ollama(messages)
+                latency = round(time.time() - start_t, 2)
+                res["metadata"] = {"model": OLLAMA_MODEL, "latency": latency, "tokens": {}, "fallback_triggered": False}
+                return res
             except Exception as e:
                 last_error = e
                 logger.error("Attempt %d/%d - Ollama error: %s", attempt, MAX_RETRIES, e)
@@ -235,15 +250,37 @@ def _call_llm(messages):
                     time.sleep(RETRY_DELAY * attempt)
         raise ConnectionError(f"Ollama failed after {MAX_RETRIES} attempts: {last_error}")
 
-    # Gemini: walk the model chain on 429 / 503 errors
+    primary_model = ModelRouter.get_model(task_type, difficulty)
+    
+    # Build dynamic chain: primary model first, then the remaining fallbacks
+    chain = [primary_model]
+    for m in _GEMINI_MODEL_CHAIN:
+        if m != primary_model and m not in chain:
+            chain.append(m)
+
     last_error = None
-    for model in _GEMINI_MODEL_CHAIN:
+    for idx, model in enumerate(chain):
+        is_fallback = (idx > 0)
         for attempt in range(1, MAX_RETRIES + 1):
             try:
+                start_t = time.time()
                 result = _call_gemini_model(messages, model)
+                latency = round(time.time() - start_t, 2)
+                
+                if is_fallback:
+                    logger.info("Task '%s' fallback: successfully used %s (latency: %ss)", task_type, model, latency)
+                
                 if model != MODEL_NAME:
-                    logger.info("Now using fallback model: %s", model)
                     MODEL_NAME = model
+
+                # Inject telemetry
+                result.setdefault("metadata", {})
+                result["metadata"].update({
+                    "model": model,
+                    "latency": latency,
+                    "fallback_triggered": is_fallback
+                })
+                
                 return result
             except Exception as e:
                 err_str = str(e)
@@ -252,10 +289,9 @@ def _call_llm(messages):
                 is_not_found = "404" in err_str or "NOT_FOUND" in err_str
 
                 if is_not_found:
-                    # Model doesn't exist for this key — skip immediately
                     logger.warning("Model '%s' not found, trying next fallback...", model)
                     last_error = e
-                    break  # break inner loop, move to next model
+                    break
 
                 if is_rate_limit or is_unavailable:
                     logger.warning(
@@ -267,19 +303,17 @@ def _call_llm(messages):
                     if attempt < MAX_RETRIES:
                         time.sleep(RETRY_DELAY * attempt)
                     else:
-                        break  # exhausted retries for this model, try next
+                        break
                 else:
-                    # Non-rate-limit error (auth, network, parse) — log and retry
-                    logger.error("Attempt %d/%d - Gemini error on '%s': %s", attempt, MAX_RETRIES, model, e)
+                    # other error (e.g. timeout, parse error) -> retry same model
+                    logger.warning("Attempt %d/%d - Gemini error with %s: %s", attempt, MAX_RETRIES, model, err_str)
                     last_error = e
                     if attempt < MAX_RETRIES:
                         time.sleep(RETRY_DELAY * attempt)
                     else:
                         break
 
-    raise ConnectionError(
-        f"All Gemini models exhausted. Chain tried: {_GEMINI_MODEL_CHAIN}. Last error: {last_error}"
-    )
+    raise ConnectionError(f"Gemini failed after trying all models in chain. Last error: {last_error}")
 
 
 def check_health():
@@ -349,7 +383,7 @@ PERSONA_PROMPTS = {
 }
 
 
-def evaluate_main(question, answer, context=None, domain_slug="marketing"):
+def evaluate_main(question, answer, context=None, domain_slug="marketing", difficulty=None):
     from .domain_bridge import get_domain_evaluation_prompt, get_domain_scoring_dimensions
 
     persona_cfg = cfg.get("persona", {})
@@ -395,19 +429,23 @@ Scoring rules (ALL scores must be integers from 0 to 10):
 
 IMPORTANT: Use ONLY integers between 0 and 10. DO NOT use a 0-100 scale.
 
+If the overall_score is below 6, write a 2-3 sentence ideal model answer in "ideal_answer".
+If the overall_score is 6 or above, leave "ideal_answer" as an empty string.
+
 Return ONLY valid JSON in this exact format:
 {{
 {dims_json}
   "overall_score": 0,
   "strengths": ["", ""],
   "weaknesses": ["", ""],
+  "ideal_answer": "",
   "follow_up": "",
   "is_serious": true
 }}
 """
 
     try:
-        response = _call_llm([{"role": "user", "content": prompt}])
+        response = _call_llm([{"role": "user", "content": prompt}], task_type="evaluate_main", difficulty=difficulty)
     except ConnectionError as e:
         logger.error("LLM call failed for main evaluation: %s", e)
         dims = get_domain_scoring_dimensions(domain_slug)
@@ -429,6 +467,8 @@ Return ONLY valid JSON in this exact format:
         result = _normalize_scores(result)
         result["overall_score"] = _compute_weighted_score(result, domain_slug=domain_slug)
         result["context_aware"] = bool(context)
+        if "metadata" in response:
+            result["_telemetry"] = response["metadata"]
         return result
     except json.JSONDecodeError as e:
         logger.error("Failed to parse main evaluation JSON: %s", e)
@@ -447,7 +487,7 @@ Return ONLY valid JSON in this exact format:
         return fallback
 
 
-def evaluate_followup(answer, main_score=None):
+def evaluate_followup(answer, main_score=None, difficulty=None):
     score_context = ""
     if main_score is not None:
         score_context = f"The candidate previously answered this question and scored {main_score}/10.\nThis is their follow-up response. Evaluate if they improved.\n\n"
@@ -475,7 +515,7 @@ Return ONLY valid JSON in this exact format:
 """
 
     try:
-        response = _call_llm([{"role": "user", "content": prompt}])
+        response = _call_llm([{"role": "user", "content": prompt}], task_type="generate_followup", difficulty=difficulty)
     except ConnectionError as e:
         logger.error("LLM call failed for follow-up evaluation: %s", e)
         return {
@@ -495,6 +535,8 @@ Return ONLY valid JSON in this exact format:
         if raw_score > 10:
             raw_score = raw_score / 10.0
         result["score"] = round(max(0.0, min(10.0, raw_score)), 2)
+        if "metadata" in response:
+            result["_telemetry"] = response["metadata"]
         return result
     except json.JSONDecodeError as e:
         logger.error("Failed to parse follow-up evaluation JSON: %s", e)

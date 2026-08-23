@@ -89,6 +89,9 @@ Scoring rules (ALL scores MUST be integers 0-10. NEVER use 0-100):
 IMPORTANT: Use ONLY integers between 0 and 10 for ALL scores.
 DO NOT use a 0-100 scale.
 
+If the overall_score is below 6, write a 2-3 sentence ideal model answer in "ideal_answer".
+If the overall_score is 6 or above, leave "ideal_answer" as an empty string.
+
 Return ONLY valid JSON in this exact format:
 {{
   "analytical_rigor": 0,
@@ -98,6 +101,7 @@ Return ONLY valid JSON in this exact format:
   "overall_score": 0,
   "strengths": ["", ""],
   "weaknesses": ["", ""],
+  "ideal_answer": "",
   "follow_up": "",
   "is_serious": true
 }}"""

@@ -108,3 +108,18 @@ persona:
 # Logging
 logging:
   level: "INFO"
+
+# Model Routing
+model_routing:
+  enabled: true
+  routes:
+    pre_screen: "gemini-3.1-flash-lite"
+    generate_coaching: "gemini-3.5-flash"
+    evaluate_main:
+      easy: "gemini-3.5-flash"
+      medium: "gemini-3.6-flash"
+      hard: "gemini-pro-latest"
+    generate_followup:
+      easy: "gemini-3.5-flash"
+      medium: "gemini-3.6-flash"
+      hard: "gemini-pro-latest"

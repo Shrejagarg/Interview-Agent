@@ -47,7 +47,7 @@ from .interviewer import (
 from .state import (
     create_interview_state, record_answer, update_topic_score,
     add_warning, add_seriousness_flag, finalize_topics, get_average,
-    export_session
+    get_integrity_score, export_session
 )
 
 # Report
@@ -66,4 +66,10 @@ from .domain_bridge import (
     get_domain, get_domain_topics, get_domain_scoring_dimensions,
     get_domain_evaluation_prompt, get_domain_questions, get_domain_skills,
     get_domain_recommendation, list_available_domains
+)
+
+# User Profile
+from .user_profile import (
+    get_user_sessions, calculate_learning_curve,
+    get_question_history, generate_study_path
 )

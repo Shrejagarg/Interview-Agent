@@ -4,6 +4,7 @@ import os
 import logging
 import string
 from collections import deque
+from datetime import datetime
 from .config import get_config
 from .question_bank import QUESTION_BANK
 
@@ -89,6 +90,8 @@ def load_asked_history():
         try:
             with open(ANTI_REPEAT_FILE, "r") as f:
                 data = json.load(f)
+                if isinstance(data, dict):
+                    return list(data.keys())
                 if isinstance(data, list):
                     return data
         except (json.JSONDecodeError, IOError):
@@ -106,10 +109,18 @@ def save_asked_history(history):
         logger.error("Failed to save anti-repeat history: %s", e)
 
 
-def record_asked(question_id):
-    history = load_asked_history()
-    history.append(question_id)
-    save_asked_history(history)
+def record_asked(question_id, score=None):
+    data = _load_spaced_repetition_data()
+    q_key = str(question_id)
+    entry = data.get(q_key, {"count": 0, "last_score": None, "history": []})
+    entry["count"] = entry.get("count", 0) + 1
+    if score is not None:
+        entry["last_score"] = score
+    entry["history"].append(datetime.now().isoformat())
+    window = cfg["question_engine"]["anti_repeat_window"]
+    entry["history"] = entry["history"][-window:]
+    data[q_key] = entry
+    _save_spaced_repetition_data(data)
 
 
 def get_difficulty_distribution(experience_level):
@@ -237,9 +248,54 @@ def filter_by_difficulty(questions, difficulty):
 
 def filter_unasked(questions):
     history = load_asked_history()
-    asked_set = set(history)
-    unasked = [q for q in questions if q.get("id") not in asked_set]
+    asked_set = {str(h) for h in history}
+    unasked = [q for q in questions if str(q.get("id")) not in asked_set]
     return unasked
+
+
+def _load_spaced_repetition_data():
+    if os.path.exists(ANTI_REPEAT_FILE):
+        try:
+            with open(ANTI_REPEAT_FILE, "r") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+        except (json.JSONDecodeError, IOError):
+            pass
+    return {}
+
+
+def _save_spaced_repetition_data(data):
+    window = cfg["question_engine"]["anti_repeat_window"]
+    trimmed = dict(list(data.items())[-window:])
+    try:
+        with open(ANTI_REPEAT_FILE, "w") as f:
+            json.dump(trimmed, f)
+    except IOError as e:
+        logger.error("Failed to save spaced repetition data: %s", e)
+
+
+def _score_question_suitability(question):
+    q_id = str(question.get("id", ""))
+    data = _load_spaced_repetition_data()
+    entry = data.get(q_id)
+
+    if entry is None:
+        return 0
+
+    last_score = entry.get("last_score")
+    count = entry.get("count", 0)
+
+    if last_score is not None and last_score >= 8.0:
+        return 1000
+
+    if last_score is not None and last_score <= 4.0:
+        return -50
+
+    if last_score is not None and last_score <= 6.0:
+        return -20
+
+    return count * 10
 
 
 def shuffle_questions(questions):
@@ -345,7 +401,10 @@ def select_questions(resume_data, question_count=None, domain_questions=None):
     bank = domain_questions if domain_questions is not None else QUESTION_BANK
 
     candidates = filter_by_role(bank, experience_level)
-    candidates = filter_unasked(candidates)
+
+    if len(candidates) >= count:
+        candidates.sort(key=lambda q: _score_question_suitability(q))
+        candidates = candidates[:max(count * 2, count + 5)]
 
     if len(candidates) < count:
         candidates = filter_by_role(bank, experience_level)
@@ -475,8 +534,8 @@ def get_question_set(resume_data, question_count=None, domain_slug="marketing"):
         all_questions = all_questions[:count]
 
     max_per_topic = cfg["question_engine"].get("max_per_topic", 1)
-    if count <= 7:
-        max_per_topic = min(max_per_topic, 1)
+    if count <= 5:
+        max_per_topic = max(max_per_topic, 2)
     all_questions = deduplicate_by_topic(all_questions, max_per_topic=max_per_topic)
 
     all_questions = _semantic_dedup(all_questions, llm_questions + bank_questions + personalized, threshold=0.35)
@@ -488,7 +547,7 @@ def get_question_set(resume_data, question_count=None, domain_slug="marketing"):
         all_questions = shuffle_questions(all_questions)
 
     for q in all_questions:
-        record_asked(q["id"])
+        record_asked(q["id"], score=None)
 
     topics_covered = calculate_topic_coverage(all_questions, set(q["topic"] for q in QUESTION_BANK) | {"personalized"})
 

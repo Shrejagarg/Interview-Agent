@@ -14,16 +14,16 @@ from backend.app.api.auth import UserProfile
 AUTH_PATCH_TARGET = "backend.app.api.auth.get_current_user"
 
 
-def _mock_llm(messages):
+def _mock_llm(messages, *args, **kwargs):
     import json
     return {
         "message": {
             "content": json.dumps({
-                "relevance": 70,
-                "clarity": 65,
-                "creativity": 75,
-                "communication": 72,
-                "overall_score": 70,
+                "relevance": 7.5,
+                "clarity": 8.0,
+                "creativity": 6.5,
+                "communication": 7.5,
+                "overall_score": 7.5,
                 "strengths": ["Good structure"],
                 "weaknesses": ["Could be more specific"],
                 "follow_up": "",
@@ -58,7 +58,8 @@ def _mock_candidate_auth(*args, **kwargs):
 client = TestClient(app)
 
 _patches = [
-    patch("backend.app.api.interviews._call_llm", side_effect=_mock_llm),
+    patch("core.evaluator._call_llm", side_effect=_mock_llm),
+    patch("core.engine.pre_screen_answer", return_value={"pass": True, "auto_score": 0}),
 ]
 
 
