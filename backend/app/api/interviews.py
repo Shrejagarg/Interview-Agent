@@ -38,7 +38,7 @@ class StartInterviewRequest(BaseModel):
 class AnswerRequest(BaseModel):
     question_id: Union[str, int]
     answer_text: str
-    answer_time_seconds: Optional[int] = None
+    answer_time_seconds: Optional[float] = None
 
 
 class FollowupRequest(BaseModel):

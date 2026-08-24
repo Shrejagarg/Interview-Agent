@@ -120,6 +120,7 @@ export default function InterviewPage() {
 
       if (res.has_next && res.next_question) {
         setQuestion(res.next_question);
+        addMessage({ role: "ai", content: res.next_question.question });
         questionStart.current = Date.now();
         setElapsed(0);
         timerRef.current = setInterval(() => {
@@ -160,6 +161,7 @@ export default function InterviewPage() {
 
       if (res.has_next && res.next_question) {
         setQuestion(res.next_question);
+        addMessage({ role: "ai", content: res.next_question.question });
         questionStart.current = Date.now();
         setElapsed(0);
         timerRef.current = setInterval(() => {
