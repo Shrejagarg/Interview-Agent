@@ -23,26 +23,12 @@ services:
     networks:
       - interview-network
 
-  frontend-candidate:
+  frontend:
     build:
-      context: ./frontend/candidate
+      context: ./frontend/web
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
-    env_file:
-      - .env
-    depends_on:
-      backend:
-        condition: service_healthy
-    networks:
-      - interview-network
-
-  frontend-company:
-    build:
-      context: ./frontend/company
-      dockerfile: Dockerfile
-    ports:
-      - "3001:3000"
     env_file:
       - .env
     depends_on:

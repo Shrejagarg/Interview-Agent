@@ -1,0 +1,45 @@
+ALEXANDER CHEN
+New York, NY 10001 | (555) 123-4567 | alexander.chen@email.com | linkedin.com/in/alexanderchen
+
+PROFESSIONAL SUMMARY
+Results-driven Financial Analyst with over 4 years of experience in corporate finance, financial modeling, and strategic planning. Proven track record in streamlining financial operations, developing robust valuation models, and delivering actionable insights that drive revenue growth and cost-saving initiatives. Adept at cross-functional collaboration and translating complex financial data into clear executive presentations.
+
+CORE COMPETENCIES
+- Financial Modeling & Valuation (DCF, LBO, Comparables)
+- Variance Analysis & Forecasting
+- Capital Budgeting & Allocation
+- Advanced Excel (VBA, Macros, Power Query)
+- Data Visualization (Tableau, Power BI)
+- Risk Management & Compliance
+- Enterprise Resource Planning (SAP, Oracle)
+
+PROFESSIONAL EXPERIENCE
+
+Senior Financial Analyst | Apex Capital Partners | New York, NY
+June 2021 – Present
+- Lead the annual budgeting and quarterly forecasting processes for a $500M portfolio, improving forecast accuracy by 15% year-over-year.
+- Develop and maintain complex financial models to evaluate M&A opportunities, directly contributing to the successful acquisition of a $50M regional competitor.
+- Analyze monthly variance reports (budget vs. actuals) and present findings to the CFO and executive team, identifying key drivers of underperformance.
+- Implement automated dashboards using Power BI that reduced monthly reporting time by 20 hours.
+- Mentor and train 2 junior analysts in financial modeling best practices and advanced Excel techniques.
+
+Financial Analyst | Horizon Financial Group | Boston, MA
+August 2018 – May 2021
+- Supported the corporate finance team by building 3-statement models for 5 mid-cap client companies.
+- Conducted deep-dive market research and competitor analysis to support capital raising initiatives, successfully securing $120M in debt financing.
+- Monitored working capital metrics and developed cash flow forecasting models that improved liquidity visibility by 30%.
+- Streamlined the expense tracking process by integrating Oracle ERP data with Excel models, saving the department 10 hours weekly.
+
+EDUCATION
+
+Bachelor of Science in Finance, Magna Cum Laude
+Boston University, Questrom School of Business | Boston, MA
+May 2018
+- GPA: 3.8/4.0
+- Relevant Coursework: Corporate Finance, Investment Analysis, Financial Accounting, Quantitative Methods, Microeconomics
+- Extracurriculars: Vice President of the BU Investment Club, Student Managed Investment Fund Analyst
+
+CERTIFICATIONS & SKILLS
+- Certifications: Chartered Financial Analyst (CFA) Level II Candidate, Bloomberg Market Concepts (BMC) Certified
+- Technical Skills: Advanced MS Excel (Index/Match, VLOOKUP, Pivot Tables, VBA), SQL, Tableau, Power BI, SAP FI/CO, Python (Pandas basics for data manipulation)
+- Soft Skills: Analytical Thinking, Executive Communication, Problem Solving, Cross-functional Leadership
