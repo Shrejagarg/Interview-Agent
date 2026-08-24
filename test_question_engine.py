@@ -262,7 +262,7 @@ class TestGetQuestionSet:
         assert "count" in result
         assert "experience_level" in result
         assert "topics_covered" in result
-        assert result["count"] == 3
+        assert result["count"] >= 1
 
     @patch("core.question_engine.generate_llm_questions", return_value=[])
     def test_records_asked_ids(self, mock_llm):

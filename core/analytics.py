@@ -108,6 +108,11 @@ def skill_gap_analysis(resume_data, session, domain_slug="marketing"):
     if not resume_data:
         return {"error": "No resume data provided"}
 
+    # Normalize skills field: frontend may send a flat list instead of nested dict
+    skills_val = resume_data.get("skills")
+    if isinstance(skills_val, list):
+        resume_data["skills"] = {"skills": skills_val, "categories": [], "skill_count": len(skills_val)}
+
     domain_skills = get_domain_skills(domain_slug)
     skill_to_category = {}
     for cat, skills in domain_skills.items():

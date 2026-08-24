@@ -7,6 +7,16 @@ from core.config import get_config
 
 logger = logging.getLogger(__name__)
 
+def _normalize_skills_field(resume_data):
+    """Normalize resume_data['skills'] to always be a dict with 'skills' list and 'categories' list."""
+    if not resume_data:
+        return resume_data
+    skills = resume_data.get("skills")
+    if isinstance(skills, list):
+        resume_data["skills"] = {"skills": skills, "categories": [], "skill_count": len(skills)}
+    return resume_data
+
+
 class InterviewEngine:
     def __init__(self):
         self.cfg = get_config()
@@ -17,7 +27,8 @@ class InterviewEngine:
 
         domain_slug = state["domain"]
         q_count = question_count or self.cfg["interview"]["question_count"]
-        
+        resume_data = _normalize_skills_field(resume_data)
+
         if questions:
             question_set = {"questions": questions[:q_count], "experience_level": resume_data.get("experience_level", "unknown") if resume_data else "unknown"}
         else:
