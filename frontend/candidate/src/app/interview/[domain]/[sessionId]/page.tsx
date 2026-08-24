@@ -13,6 +13,20 @@ interface Question {
   total: number;
 }
 
+interface ChatMessage {
+  role: "ai" | "user" | "feedback" | "followup" | "coaching";
+  content: string;
+  score?: number;
+  strengths?: string[];
+  weaknesses?: string[];
+}
+
+function formatTime(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 export default function InterviewPage() {
   const params = useParams();
   const router = useRouter();
@@ -21,26 +35,27 @@ export default function InterviewPage() {
   const [question, setQuestion] = useState<Question | null>(null);
   const [answer, setAnswer] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState<{ score: number; strengths: string[]; weaknesses: string[] } | null>(null);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
 
-  const [pendingFollowup, setPendingFollowup] = useState<string | null>(null);
-  const [followupAnswer, setFollowupAnswer] = useState("");
-  const [followupSubmitting, setFollowupSubmitting] = useState(false);
-  const [followupFeedback, setFollowupFeedback] = useState<{ score: number; notes: string } | null>(null);
-
-  const questionStartTime = useRef<number>(Date.now());
-  const followupStartTime = useRef<number>(Date.now());
+  const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [elapsed, setElapsed] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const questionStart = useRef<number>(Date.now());
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const loadQuestion = useCallback(async () => {
     try {
       const q = await api.getQuestion(sessionId);
       setQuestion(q);
       setAnswer("");
-      setFeedback(null);
       setError("");
-      questionStartTime.current = Date.now();
+      questionStart.current = Date.now();
+      setElapsed(0);
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        setElapsed((Date.now() - questionStart.current) / 1000);
+      }, 100);
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("completed")) {
         router.push(`/results/${sessionId}`);
@@ -52,40 +67,68 @@ export default function InterviewPage() {
 
   useEffect(() => {
     loadQuestion();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [loadQuestion]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chat]);
+
+  const addMessage = (msg: ChatMessage) => setChat((prev) => [...prev, msg]);
 
   const handleSubmit = async () => {
     if (!question || !answer.trim()) return;
     setSubmitting(true);
     setError("");
-    const answerTime = (Date.now() - questionStartTime.current) / 1000;
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    addMessage({ role: "ai", content: question.question });
+    addMessage({ role: "user", content: answer });
+    setAnswer("");
+
+    const answerTime = (Date.now() - questionStart.current) / 1000;
     try {
       const res = await api.submitAnswer(sessionId, question.id, answer, answerTime);
+
       if (res.follow_up) {
-        setPendingFollowup(res.follow_up);
-        setFollowupAnswer("");
-        setFollowupFeedback(null);
-        followupStartTime.current = Date.now();
+        addMessage({ role: "followup", content: res.follow_up });
         setSubmitting(false);
+        questionStart.current = Date.now();
+        setElapsed(0);
+        timerRef.current = setInterval(() => {
+          setElapsed((Date.now() - questionStart.current) / 1000);
+        }, 100);
         return;
       }
-      setFeedback({
+
+      addMessage({
+        role: "feedback",
+        content: `Score: ${res.evaluation.overall_score}/10`,
         score: res.evaluation.overall_score,
-        strengths: res.evaluation.strengths || [],
-        weaknesses: res.evaluation.weaknesses || [],
+        strengths: res.evaluation.strengths,
+        weaknesses: res.evaluation.weaknesses,
       });
+
+      if (res.evaluation.ideal_answer && typeof res.evaluation.ideal_answer === "string" && res.evaluation.ideal_answer.trim()) {
+        addMessage({
+          role: "coaching",
+          content: res.evaluation.ideal_answer,
+        });
+      }
+
       if (res.has_next && res.next_question) {
-        setTimeout(() => {
-          setQuestion(res.next_question);
-          setAnswer("");
-          setFeedback(null);
-          questionStartTime.current = Date.now();
-        }, 2000);
+        setQuestion(res.next_question);
+        questionStart.current = Date.now();
+        setElapsed(0);
+        timerRef.current = setInterval(() => {
+          setElapsed((Date.now() - questionStart.current) / 1000);
+        }, 100);
       } else {
         setDone(true);
-        setTimeout(() => {
-          router.push(`/results/${sessionId}`);
-        }, 2000);
+        addMessage({ role: "ai", content: "Interview complete! Redirecting to your report..." });
+        setTimeout(() => router.push(`/results/${sessionId}`), 2500);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to submit");
@@ -95,117 +138,190 @@ export default function InterviewPage() {
   };
 
   const handleFollowupSubmit = async () => {
-    if (!followupAnswer.trim()) return;
-    setFollowupSubmitting(true);
+    if (!answer.trim()) return;
+    setSubmitting(true);
     setError("");
-    const answerTime = (Date.now() - followupStartTime.current) / 1000;
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    addMessage({ role: "user", content: answer });
+    setAnswer("");
+
+    const answerTime = (Date.now() - questionStart.current) / 1000;
     try {
-      const res = await api.submitFollowup(sessionId, followupAnswer, answerTime);
-      setFollowupFeedback({
+      const res = await api.submitFollowup(sessionId, answer, answerTime);
+      addMessage({
+        role: "feedback",
+        content: `Follow-up score: ${res.merged_score}/10`,
         score: res.merged_score,
-        notes: res.followup_evaluation.notes,
       });
-      setPendingFollowup(null);
+      if (res.followup_evaluation.notes) {
+        addMessage({ role: "coaching", content: res.followup_evaluation.notes });
+      }
+
       if (res.has_next && res.next_question) {
-        setTimeout(() => {
-          setQuestion(res.next_question);
-          setAnswer("");
-          setFollowupFeedback(null);
-          questionStartTime.current = Date.now();
-        }, 2000);
+        setQuestion(res.next_question);
+        questionStart.current = Date.now();
+        setElapsed(0);
+        timerRef.current = setInterval(() => {
+          setElapsed((Date.now() - questionStart.current) / 1000);
+        }, 100);
       } else {
         setDone(true);
-        setTimeout(() => {
-          router.push(`/results/${sessionId}`);
-        }, 2000);
+        addMessage({ role: "ai", content: "Interview complete! Redirecting to your report..." });
+        setTimeout(() => router.push(`/results/${sessionId}`), 2500);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to submit follow-up");
     } finally {
-      setFollowupSubmitting(false);
+      setSubmitting(false);
     }
   };
 
-  if (!question && !error) return <p>Loading question...</p>;
-  if (error) return <p className="text-red-600">{error}</p>;
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && answer.trim() && !submitting) {
+      e.preventDefault();
+      if (chat.length > 0 && chat[chat.length - 1]?.role === "followup") {
+        handleFollowupSubmit();
+      } else {
+        handleSubmit();
+      }
+    }
+  };
+
+  const isFollowupMode = chat.length > 0 && chat[chat.length - 1]?.role === "followup";
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {question && (
-        <div className="mb-4 text-sm text-gray-500">
-          Question {question.index}/{question.total} | {question.topic} | {question.difficulty}
+    <div className="space-y-4">
+      {/* Header Bar */}
+      <div className="glass flex items-center justify-between p-4">
+        <div className="flex items-center gap-3">
+          {question && (
+            <span className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-bold text-white">
+              {question.index}/{question.total}
+            </span>
+          )}
+          {question && (
+            <span className="text-xs text-gray-500">
+              {question.topic.replace(/_/g, " ")} · {question.difficulty}
+            </span>
+          )}
         </div>
-      )}
+        <div className={`text-sm font-mono font-semibold tabular-nums ${elapsed > 60 ? "text-amber-600" : "text-gray-600"}`}>
+          {formatTime(elapsed)}
+        </div>
+      </div>
 
-      {question && (
-        <div className="mb-4 p-4 border border-gray-200">
-          <p className="text-base font-medium">{question.question}</p>
-        </div>
-      )}
+      {/* Chat Area */}
+      <div className="glass overflow-hidden">
+        <div className="max-h-[60vh] overflow-y-auto p-6 space-y-4">
+          {chat.map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
+                  msg.role === "user"
+                    ? "bg-slate-900 text-white"
+                    : msg.role === "feedback"
+                    ? "bg-emerald-50 border border-emerald-200 text-emerald-900"
+                    : msg.role === "coaching"
+                    ? "bg-amber-50 border border-amber-200 text-amber-900"
+                    : msg.role === "followup"
+                    ? "bg-blue-50 border border-blue-200 text-blue-900"
+                    : "bg-gray-100 text-gray-800"
+                }`}
+              >
+                {msg.role === "coaching" && (
+                  <p className="text-xs font-bold mb-1 text-amber-600">💡 Coaching Tip</p>
+                )}
+                {msg.role === "followup" && (
+                  <p className="text-xs font-bold mb-1 text-blue-600">Follow-up Question</p>
+                )}
+                <p className="whitespace-pre-wrap">{msg.content}</p>
+                {msg.score !== undefined && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-lg font-bold">{msg.score.toFixed(1)}</span>
+                    <span className="text-xs opacity-70">/ 10</span>
+                  </div>
+                )}
+                {msg.strengths && msg.strengths.length > 0 && (
+                  <div className="mt-2 text-xs text-emerald-700">
+                    <span className="font-medium">Strengths:</span> {msg.strengths.join(", ")}
+                  </div>
+                )}
+                {msg.weaknesses && msg.weaknesses.length > 0 && (
+                  <div className="mt-1 text-xs text-rose-600">
+                    <span className="font-medium">Weaknesses:</span> {msg.weaknesses.join(", ")}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
 
-      {pendingFollowup ? (
-        <div className="p-4 border border-blue-200 bg-blue-50">
-          <p className="text-sm font-medium text-blue-800 mb-2">Follow-up Question</p>
-          <p className="mb-3">{pendingFollowup}</p>
-          <textarea
-            value={followupAnswer}
-            onChange={(e) => setFollowupAnswer(e.target.value)}
-            placeholder="Type your follow-up answer here..."
-            rows={4}
-            disabled={followupSubmitting}
-            className="w-full p-2 font-mono resize-y border border-gray-200 focus:border-gray-400 outline-none"
-          />
-          <button
-            onClick={handleFollowupSubmit}
-            disabled={!followupAnswer.trim() || followupSubmitting}
-            className="mt-2 px-4 py-2 cursor-pointer bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-          >
-            {followupSubmitting ? "Evaluating..." : "Submit Follow-Up"}
-          </button>
+          {chat.length === 0 && question && (
+            <div className="flex justify-start">
+              <div className="max-w-[85%] rounded-2xl bg-gray-100 px-4 py-3 text-sm text-gray-800">
+                {question.question}
+              </div>
+            </div>
+          )}
+
+          {submitting && (
+            <div className="flex justify-start">
+              <div className="rounded-2xl bg-gray-100 px-4 py-3 text-sm text-gray-500 flex items-center gap-2">
+                <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0ms]" />
+                <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]" />
+                <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]" />
+              </div>
+            </div>
+          )}
+
+          <div ref={chatEndRef} />
         </div>
-      ) : (
-        <>
+      </div>
+
+      {/* Input Area */}
+      {!done && (
+        <div className="glass p-4">
+          {error && (
+            <div className="mb-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>
+          )}
           <textarea
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
-            placeholder="Type your answer here..."
-            rows={6}
-            disabled={done}
-            className="w-full p-2 font-mono resize-y border border-gray-200 focus:border-gray-400 outline-none"
+            onKeyDown={handleKeyDown}
+            placeholder={
+              isFollowupMode
+                ? "Type your follow-up answer..."
+                : "Type your answer here... (Ctrl+Enter to submit)"
+            }
+            rows={4}
+            disabled={submitting}
+            className="w-full rounded-lg border border-gray-200 bg-white p-3 text-sm focus:border-slate-400 focus:outline-none resize-none disabled:opacity-50"
           />
-          <button
-            onClick={handleSubmit}
-            disabled={!answer.trim() || submitting || done}
-            className="mt-2.5 px-4 py-2 cursor-pointer bg-black text-white hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
-          >
-            {submitting ? "Evaluating..." : "Submit Answer"}
-          </button>
-        </>
-      )}
-
-      {feedback && (
-        <div className="mt-3 p-3 border border-gray-200">
-          <p className="font-medium">Score: {feedback.score}/100</p>
-          {feedback.strengths.length > 0 && (
-            <p className="text-green-700">Strengths: {feedback.strengths.join(", ")}</p>
-          )}
-          {feedback.weaknesses.length > 0 && (
-            <p className="text-red-600">Weaknesses: {feedback.weaknesses.join(", ")}</p>
-          )}
-        </div>
-      )}
-
-      {followupFeedback && (
-        <div className="mt-3 p-3 border border-blue-200 bg-blue-50">
-          <p className="font-medium">Merged Score: {followupFeedback.score}/100</p>
-          {followupFeedback.notes && <p className="text-sm text-gray-600">{followupFeedback.notes}</p>}
+          <div className="mt-3 flex items-center justify-between">
+            <span className="text-xs text-gray-400">Ctrl+Enter to submit</span>
+            <button
+              onClick={isFollowupMode ? handleFollowupSubmit : handleSubmit}
+              disabled={!answer.trim() || submitting}
+              className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:bg-gray-300 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {submitting
+                ? "Evaluating..."
+                : isFollowupMode
+                ? "Submit Follow-up"
+                : "Submit Answer"}
+            </button>
+          </div>
         </div>
       )}
 
       {done && (
-        <p className="mt-3 font-bold">
-          Interview complete! Redirecting to results...
-        </p>
+        <div className="glass p-6 text-center">
+          <p className="text-lg font-bold text-slate-900">Interview Complete!</p>
+          <p className="mt-1 text-sm text-gray-500">Redirecting to your report...</p>
+          <div className="mt-3 h-1 w-32 mx-auto rounded-full bg-gray-200 overflow-hidden">
+            <div className="h-full bg-slate-900 animate-pulse rounded-full" />
+          </div>
+        </div>
       )}
     </div>
   );

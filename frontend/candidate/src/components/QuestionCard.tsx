@@ -26,23 +26,28 @@ export default function QuestionCard({
   disabled,
 }: QuestionCardProps) {
   return (
-    <div>
-      <div className="mb-3 text-gray-500 text-sm">
-        [{index}/{total} | {topic} | {difficulty}]
+    <div className="glass p-5 space-y-3">
+      <div className="flex items-center gap-2 text-xs text-gray-500">
+        <span className="rounded-lg bg-slate-900 px-2 py-0.5 font-bold text-white">
+          {index}/{total}
+        </span>
+        <span>{topic.replace(/_/g, " ")}</span>
+        <span className="text-gray-300">·</span>
+        <span>{difficulty}</span>
       </div>
-      <h2 className="text-base font-medium">{question}</h2>
+      <p className="text-sm font-medium text-slate-900">{question}</p>
       <textarea
         value={answer}
         onChange={(e) => onAnswerChange(e.target.value)}
         placeholder="Type your answer here..."
         rows={6}
         disabled={disabled}
-        className="w-full p-2 mt-3 font-mono resize-y border border-gray-200 focus:border-gray-400 outline-none"
+        className="w-full rounded-lg border border-gray-200 bg-white p-3 text-sm focus:border-slate-400 focus:outline-none resize-none disabled:opacity-50"
       />
       <button
         onClick={onSubmit}
         disabled={!answer.trim() || submitting || disabled}
-        className="mt-2.5 px-4 py-2 cursor-pointer bg-black text-white hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
+        className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:bg-gray-300 disabled:cursor-not-allowed cursor-pointer"
       >
         {submitting ? "Evaluating..." : "Submit Answer"}
       </button>

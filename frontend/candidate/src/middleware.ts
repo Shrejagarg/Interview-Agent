@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const publicPaths = ["/", "/login", "/register"];
+const publicPaths = ["/login", "/register"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -18,7 +18,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (token && (pathname === "/login" || pathname === "/register")) {
-    return NextResponse.redirect(new URL("/interview", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();

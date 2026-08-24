@@ -1,7 +1,7 @@
 export default function RootLoading() {
   return (
-    <div className="flex items-center justify-center min-h-[50vh]">
-      <p className="text-gray-500">Loading...</p>
+    <div className="flex items-center justify-center py-20">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-slate-900" />
     </div>
   );
 }

@@ -1,19 +1,7 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import Nav from "@/components/Nav";
-
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  display: "swap",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Interview Agent",
@@ -23,12 +11,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans m-0 p-0`}>
+      <body className="min-h-screen bg-[#f8fafc] text-slate-900 antialiased">
         <AuthProvider>
           <Nav />
-          <main className="p-5 max-w-[900px] mx-auto">
-            {children}
-          </main>
+          <main className="mx-auto max-w-3xl px-4 sm:px-6 py-6">{children}</main>
         </AuthProvider>
       </body>
     </html>
