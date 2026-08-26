@@ -9,7 +9,6 @@ llm:
     - "gemini-3.1-flash-lite"
     - "gemini-flash-latest"
     - "gemini-pro-latest"
-  google_api_key: "REDACTED"
   ollama_model: "llama3"
   timeout: 120
   keep_alive: "10m"

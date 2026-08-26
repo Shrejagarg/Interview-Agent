@@ -1,0 +1,48 @@
+_format_version: "1.1"
+
+consumers:
+  - username: admin
+    keyauth:
+      - key: admin-key
+
+services:
+  # PostgREST — /rest/v1/*
+  - name: rest
+    url: http://rest:3000
+    routes:
+      - name: rest-api
+        paths:
+          - /rest/v1
+        strip_path: true
+
+  # GoTrue Auth — /auth/v1/*
+  - name: auth
+    url: http://auth:9999
+    routes:
+      - name: auth-api
+        paths:
+          - /auth/v1
+        strip_path: true
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Authorization
+        - Content-Type
+        - apikey
+        - x-client-info
+      exposed_headers:
+        - X-Total-Count
+        - Link
+      max_age: 3600
+      credentials: true

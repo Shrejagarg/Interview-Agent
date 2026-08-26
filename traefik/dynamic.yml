@@ -1,0 +1,16 @@
+# Dynamic configuration is handled via Docker labels in docker-compose.yml
+# This file is a placeholder for file-based routing if needed later.
+#
+# Example manual route:
+# http:
+#   routers:
+#     api:
+#       rule: "PathPrefix(`/api`)"
+#       service: backend
+#       entryPoints:
+#         - web
+#   services:
+#     backend:
+#       loadBalancer:
+#         servers:
+#           - url: "http://backend:8000"

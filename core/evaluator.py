@@ -16,7 +16,7 @@ OLLAMA_MODEL = cfg["llm"].get("ollama_model", "llama3")
 MAX_RETRIES = cfg["llm"].get("max_retries", 3)
 RETRY_DELAY = cfg["llm"].get("retry_delay", 2)
 TIMEOUT = cfg["llm"].get("timeout", 120)
-GOOGLE_API_KEY = cfg["llm"].get("google_api_key", "") or os.getenv("GOOGLE_API_KEY", "")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 
 # Build model chain: primary first, then fallbacks (deduplicated, preserving order)
 _FALLBACKS = cfg["llm"].get("fallback_models", [])

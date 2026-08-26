@@ -17,7 +17,7 @@ MODEL_NAME = os.getenv("MODEL_NAME", "llama3")
 ENV = os.getenv("ENV", "development")
 CORS_ORIGINS = [
     o.strip()
-    for o in os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001").split(",")
+    for o in os.getenv("CORS_ORIGINS", "http://localhost,http://localhost:3000").split(",")
     if o.strip()
 ]
 

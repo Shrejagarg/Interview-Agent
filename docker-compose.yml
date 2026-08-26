@@ -1,46 +1,102 @@
-version: "3.8"
+# ── Interview Agent v2 — Docker Compose ─────────────────────────────
+#
+#   Production:  docker compose up -d
+#   Dev mode:    docker compose --profile dev up
+#   With Ollama: docker compose --profile llm up
+#   All:         docker compose --profile dev --profile llm up
+#
+# ─────────────────────────────────────────────────────────────────────
 
 services:
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
+
+  # ────────────────────────────────────────────────────────────────────
+  # REVERSE PROXY — Single entry point
+  # ────────────────────────────────────────────────────────────────────
+  traefik:
+    image: traefik:v3.1
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--providers.docker.network=interview"
+      - "--entryPoints.web.address=:80"
+      - "--log.level=INFO"
     ports:
-      - "8000:8000"
-    env_file:
-      - .env
+      - "80:80"
+      - "8080:8080"
     volumes:
-      - .:/app
-    command: uvicorn backend.app:app --host 0.0.0.0 --port 8000 --reload
-    depends_on:
-      db:
-        condition: service_healthy
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - interview
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/"]
       interval: 10s
       timeout: 5s
-      retries: 5
-    networks:
-      - interview-network
+      retries: 3
 
+  # ────────────────────────────────────────────────────────────────────
+  # FRONTEND — Unified Next.js (candidate + company)
+  # ────────────────────────────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend/web
       dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost}
+    expose:
+      - "3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.routers.frontend.priority=10"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+    networks:
+      - interview
+    restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
-    networks:
-      - interview-network
 
+  # ────────────────────────────────────────────────────────────────────
+  # BACKEND — FastAPI + Python
+  # ────────────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    expose:
+      - "8000"
+    env_file:
+      - .env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=PathPrefix(`/api`)"
+      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.routers.backend.priority=20"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+    volumes:
+      - sessions_data:/app/sessions
+    networks:
+      - interview
+    depends_on:
+      db:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ────────────────────────────────────────────────────────────────────
+  # SUPABASE STACK
+  # ────────────────────────────────────────────────────────────────────
+
+  # Database
   db:
     image: supabase/postgres:15.1.0
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-interview_agent}
@@ -53,10 +109,164 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - interview-network
+      - interview
+    restart: unless-stopped
 
+  # Auth (GoTrue)
+  auth:
+    image: supabase/gotrue:v2.65.0
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-interview_agent}
+      API_EXTERNAL_URL: http://localhost
+      SITE_URL: ${SITE_URL:-http://localhost}
+      JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-chars}
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_SMS_AUTOCONFIRM: "true"
+    networks:
+      - interview
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9999/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgREST (REST API for Postgres)
+  rest:
+    image: postgrest/postgrest:v12.2.3
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-interview_agent}
+      PGRST_DB_SCHEMAS: public,storage,graphql_public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-chars}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+    networks:
+      - interview
+    restart: unless-stopped
+
+  # Kong (API Gateway — routes /rest/v1 -> PostgREST, /auth/v1 -> GoTrue)
+  kong:
+    image: kong:3.9
+    depends_on:
+      rest:
+        condition: service_started
+      auth:
+        condition: service_healthy
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/kong.yml
+      KONG_DNS_RESOLVER: 127.0.0.11
+      KONG_NGINX_PROXY_PROXY_SET_HEADER_HOST: "X-Forwarded-Host"
+    volumes:
+      - ./traefik/kong.yml:/kong/kong.yml:ro
+    expose:
+      - "8000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kong.rule=PathPrefix(`/rest/v1`) || PathPrefix(`/auth/v1`)"
+      - "traefik.http.routers.kong.entrypoints=web"
+      - "traefik.http.routers.kong.priority=30"
+      - "traefik.http.services.kong.loadbalancer.server.port=8000"
+    networks:
+      - interview
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ────────────────────────────────────────────────────────────────────
+  # DEV PROFILE — Hot reload, bind mounts, direct ports
+  # ────────────────────────────────────────────────────────────────────
+  frontend-dev:
+    build:
+      context: ./frontend/web
+      dockerfile: Dockerfile
+      target: deps
+    volumes:
+      - ./frontend/web:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    command: npm run dev
+    profiles:
+      - dev
+    networks:
+      - interview
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  backend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      target: runtime
+    volumes:
+      - ./backend:/app/backend
+      - ./core:/app/core
+      - ./config.yaml:/app/config.yaml
+      - sessions_data:/app/sessions
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    command: uvicorn backend.app:app --host 0.0.0.0 --port 8000 --reload
+    profiles:
+      - dev
+    networks:
+      - interview
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ────────────────────────────────────────────────────────────────────
+  # LLM PROFILE — Ollama for local LLM fallback
+  # ────────────────────────────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    profiles:
+      - llm
+    networks:
+      - interview
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+# ─────────────────────────────────────────────────────────────────────
+# VOLUMES
+# ─────────────────────────────────────────────────────────────────────
 volumes:
   pgdata:
+  sessions_data:
+  ollama_data:
 
+# ─────────────────────────────────────────────────────────────────────
+# NETWORKS
+# ─────────────────────────────────────────────────────────────────────
 networks:
-  interview-network:
+  interview:
