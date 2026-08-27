@@ -94,7 +94,7 @@ services:
 
   # Database
   db:
-    image: supabase/postgres:15.1.0
+    image: postgres:15
     expose:
       - "5432"
     environment:

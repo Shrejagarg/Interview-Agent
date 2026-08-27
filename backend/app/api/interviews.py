@@ -8,11 +8,12 @@ Sessions are persisted to Supabase via backend.app.db.sessions.
 import logging
 from typing import Dict, List, Any, Optional, Union
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, BackgroundTasks
 from pydantic import BaseModel
 
 from backend.app.domains import get_registry
 from backend.app.api.auth import get_optional_user, UserProfile
+from backend.app.api.webhooks import dispatch_webhooks
 from backend.app.db.sessions import save_session_db, load_session_db, get_user_sessions_db, get_all_sessions_db
 
 from core.engine import InterviewEngine
@@ -146,7 +147,7 @@ def get_current_question(session_id: str):
 
 
 @router.post("/{session_id}/answer")
-def submit_answer(session_id: str, req: AnswerRequest):
+def submit_answer(session_id: str, req: AnswerRequest, background_tasks: BackgroundTasks):
     state = load_session_db(session_id)
     if not state:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -179,6 +180,9 @@ def submit_answer(session_id: str, req: AnswerRequest):
 
     save_session_db(state)
 
+    if state["status"] == "completed" and state.get("company_id"):
+        background_tasks.add_task(dispatch_webhooks, state["company_id"], state)
+
     return {
         "session_id": session_id,
         "answer_recorded": True,
@@ -191,7 +195,7 @@ def submit_answer(session_id: str, req: AnswerRequest):
 
 
 @router.post("/{session_id}/followup")
-def submit_followup(session_id: str, req: FollowupRequest):
+def submit_followup(session_id: str, req: FollowupRequest, background_tasks: BackgroundTasks):
     state = load_session_db(session_id)
     if not state:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -212,6 +216,9 @@ def submit_followup(session_id: str, req: FollowupRequest):
     next_q = _format_question_response(state, next_q_data)
 
     save_session_db(state)
+
+    if state["status"] == "completed" and state.get("company_id"):
+        background_tasks.add_task(dispatch_webhooks, state["company_id"], state)
 
     last_ans = state["answers"][-1]
 

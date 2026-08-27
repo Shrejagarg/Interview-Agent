@@ -1,13 +1,6 @@
-"""Centralized configuration — Supabase, LLM, app settings"""
+"""Centralized configuration — DB, LLM, app settings"""
 
 import os
-from functools import lru_cache
-from typing import Optional
-
-# ── Supabase ──────────────────────────────────────────────────────────────────
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
-SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
 # ── LLM ───────────────────────────────────────────────────────────────────────
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
@@ -21,25 +14,15 @@ CORS_ORIGINS = [
     if o.strip()
 ]
 
+# ── Auth ──────────────────────────────────────────────────────────────────────
+DEFAULT_JWT_SECRET = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", DEFAULT_JWT_SECRET)
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080")) # 7 days
 
-@lru_cache()
-def get_supabase():
-    """Get a Supabase client (cached). Returns None if not configured."""
-    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
-        return None
-    from supabase import create_client
-    return create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
-
-
-@lru_cache()
-def get_supabase_admin():
-    """Get a Supabase admin client with service role key."""
-    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
-        return None
-    from supabase import create_client
-    return create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-
-
-def is_supabase_configured() -> bool:
-    """Check if Supabase is configured."""
-    return bool(SUPABASE_URL and SUPABASE_ANON_KEY)
+# ── Webhooks ───────────────────────────────────────────────────────────────────
+WEBHOOK_TIMEOUT_SECONDS = int(os.getenv("WEBHOOK_TIMEOUT_SECONDS", "10"))
+WEBHOOK_MAX_RETRIES = int(os.getenv("WEBHOOK_MAX_RETRIES", "3"))
+# Localhost/private IPs are blocked for webhook URLs (SSRF protection), unless
+# WEBHOOK_ALLOW_PRIVATE=1 (handy for local testing / webhook.dev)
+WEBHOOK_ALLOW_PRIVATE = os.getenv("WEBHOOK_ALLOW_PRIVATE", "0") == "1"

@@ -1,4 +1,4 @@
-"""Shared test fixtures — mocks the Supabase DB layer with an in-memory dict.
+"""Shared test fixtures — mocks the SQLAlchemy DB layer with an in-memory dict.
 
 All backend tests share the same mock sessions store so that
 ``_mock_sessions.clear()`` in individual test files works as expected.
@@ -18,6 +18,11 @@ from backend.app.api import company as _company_mod
 from backend.app.api import analytics as _analytics_mod
 from backend.app.db import domains as _domains_db_mod
 from backend.app.domains import registry as _registry_mod
+
+
+def _mock_dispatch_webhooks(company_id, state):
+    """No-op webhook dispatcher — tests that care can patch this explicitly."""
+    return None
 
 # ── Mock domain rows (matches Supabase domains table) ─────────────────────────
 
@@ -419,6 +424,7 @@ def _patch_db(monkeypatch):
     monkeypatch.setattr(_interviews_mod, "load_session_db", _mock_load)
     monkeypatch.setattr(_interviews_mod, "get_user_sessions_db", _mock_get_user)
     monkeypatch.setattr(_interviews_mod, "get_all_sessions_db", _mock_get_all)
+    monkeypatch.setattr(_interviews_mod, "dispatch_webhooks", _mock_dispatch_webhooks)
     # sessions — company.py
     monkeypatch.setattr(_company_mod, "load_session_db", _mock_load)
     monkeypatch.setattr(_company_mod, "get_company_sessions_db", _mock_get_company)
@@ -436,6 +442,22 @@ def _patch_db(monkeypatch):
 
     # Reset domain registry so it reloads from mocked DB
     _registry_mod.reset_registry()
+
+    # Clean SQLite tables so tests don't leak data between runs
+    try:
+        from backend.app.db.database import engine
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            for table in (
+                "webhook_deliveries",
+                "webhooks",
+                "interview_sessions",
+                "invites",
+                "users",
+            ):
+                conn.execute(text(f"DELETE FROM {table}"))
+    except Exception:
+        pass
 
     _mock_sessions.clear()
     yield

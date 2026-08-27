@@ -85,7 +85,7 @@ class TestRootAndHealth:
         assert r.status_code == 200
         body = r.json()
         assert body["status"] == "ok"
-        assert "supabase_configured" in body
+        assert "db" in body
 
 
 # ── Domains ───────────────────────────────────────────────────────────────────

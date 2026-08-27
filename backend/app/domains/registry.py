@@ -227,3 +227,8 @@ def reset_registry():
     _DOMAINS.clear()
     _REGISTRY_LOADED = False
     _registry = None
+    try:
+        from core import domain_bridge
+        domain_bridge._registry = None
+    except Exception:
+        pass

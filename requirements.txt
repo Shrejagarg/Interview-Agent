@@ -6,7 +6,10 @@ uvicorn[standard]>=0.24.0
 httpx>=0.25.0
 pydantic[email]>=2.5.0
 python-dotenv>=1.0.0
-supabase>=2.0.0
+sqlalchemy>=2.0.0
+PyJWT>=2.8.0
+passlib[bcrypt]>=1.7.4
+bcrypt==4.0.1
 
 # Core dependencies
 PyYAML>=6.0
