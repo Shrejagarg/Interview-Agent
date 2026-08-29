@@ -10,3 +10,15 @@ dist/
 build/
 interview.db
 *.db
+
+# Test artifacts
+.coverage
+coverage/
+htmlcov/
+test-results/
+playwright-report/
+*.tsbuildinfo
+
+# Local session / OS droppings
+latest_session.json
+desktop.ini
