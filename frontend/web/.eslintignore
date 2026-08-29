@@ -1,0 +1,6 @@
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+src/test/**
+vitest.config.ts
