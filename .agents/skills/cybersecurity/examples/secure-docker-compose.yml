@@ -1,0 +1,104 @@
+# Hardened Docker Compose — production-ready security
+# Every line has a security purpose. Do not remove without understanding why.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Multi-stage build: no compilers/build tools in runtime image
+    image: myapp-api:1.2.3  # Pinned version, never :latest
+    user: "1000:1000"       # Non-root user
+    read_only: true         # Read-only filesystem
+    tmpfs:
+      - /tmp:noexec,nosuid  # Writable tmp without exec permission
+    cap_drop:
+      - ALL                 # Drop ALL Linux capabilities
+    security_opt:
+      - no-new-privileges:true  # Prevent privilege escalation
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"       # CPU limit — prevent resource exhaustion
+          memory: 512M       # Memory limit
+    environment:
+      - DATABASE_URL        # Injected at runtime, NOT baked into image
+      - API_SECRET_KEY      # From .env or secret manager
+    ports:
+      - "8000:8000"         # Only expose what's needed
+    networks:
+      - frontend            # Can talk to reverse proxy
+      - backend             # Can talk to database
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  db:
+    image: postgres:16.3-alpine  # Minimal image, pinned version
+    user: "999:999"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run/postgresql
+    volumes:
+      - pgdata:/var/lib/postgresql/data  # Only the data directory is writable
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    environment:
+      - POSTGRES_PASSWORD   # Injected at runtime
+      - POSTGRES_DB=myapp
+    # NO ports exposed — only accessible via backend network
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:1.25.4-alpine  # Pinned, minimal
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /run
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE    # Only capability needed: bind to port 80/443
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "443:443"           # Only the reverse proxy is public
+      - "80:80"
+    networks:
+      - frontend            # Can talk to API only
+    depends_on:
+      - api
+
+networks:
+  frontend:
+    driver: bridge
+  backend:                  # Database network — isolated from public
+    driver: bridge
+    internal: true          # No external access
+
+volumes:
+  pgdata:
