@@ -17,6 +17,18 @@ class User(Base):
     full_name = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class Campaign(Base):
+    __tablename__ = "campaigns"
+    
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    company_id = Column(String, ForeignKey("users.id"), nullable=False)
+    name = Column(String, nullable=False)
+    domain_slug = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    company = relationship("User")
+    invites = relationship("Invite", back_populates="campaign", cascade="all, delete-orphan")
+
 class Invite(Base):
     __tablename__ = "invites"
     
@@ -28,7 +40,13 @@ class Invite(Base):
     status = Column(String, default="active")
     created_at = Column(DateTime, default=datetime.utcnow)
     
+    # Bulk campaign fields
+    campaign_id = Column(String, ForeignKey("campaigns.id"), nullable=True)
+    recipient_email = Column(String, nullable=True)
+    recipient_name = Column(String, nullable=True)
+    
     company = relationship("User")
+    campaign = relationship("Campaign", back_populates="invites")
 
 class InterviewSession(Base):
     __tablename__ = "interview_sessions"

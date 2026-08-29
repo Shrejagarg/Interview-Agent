@@ -6,9 +6,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.config import CORS_ORIGINS, ENV, JWT_SECRET_KEY, DEFAULT_JWT_SECRET
-from backend.app.api import auth, domains, interviews, analytics, company, webhooks
+from backend.app.api import auth, domains, interviews, analytics, company, webhooks, campaigns
 from backend.app.db.database import engine, Base
-from backend.app.db.models import User, Invite, InterviewSession, Webhook, WebhookDelivery
+from backend.app.db.models import User, Invite, InterviewSession, Webhook, WebhookDelivery, Campaign
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,7 @@ app.include_router(interviews.router, prefix="/api/interviews", tags=["Interview
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(company.router, prefix="/api/company", tags=["Company"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
+app.include_router(campaigns.router, prefix="/api/campaigns", tags=["Campaigns"])
 
 
 @app.get("/")

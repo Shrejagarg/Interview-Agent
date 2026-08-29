@@ -23,9 +23,18 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _hash_password(password: str) -> str:
+    pwd_bytes = password.encode("utf-8")
+    if len(pwd_bytes) > 71:
+        import hashlib
+        password = hashlib.sha256(pwd_bytes).hexdigest()
     return pwd_context.hash(password)
 
 def _verify_password(plain_password: str, hashed_password: str) -> bool:
+    pwd_bytes = plain_password.encode("utf-8")
+    if len(pwd_bytes) > 71:
+        import hashlib
+        plain_password = hashlib.sha256(pwd_bytes).hexdigest()
+        
     # Fallback to old SHA256 if the hash doesn't look like bcrypt ($2b$)
     if not hashed_password.startswith("$2"):
         import hashlib

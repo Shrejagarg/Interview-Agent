@@ -8,13 +8,14 @@ Sessions are persisted to Supabase via backend.app.db.sessions.
 import logging
 from typing import Dict, List, Any, Optional, Union
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, BackgroundTasks
 from pydantic import BaseModel
 
 from backend.app.domains import get_registry
 from backend.app.api.auth import get_optional_user, UserProfile
 from backend.app.api.webhooks import dispatch_webhooks
 from backend.app.db.sessions import save_session_db, load_session_db, get_user_sessions_db, get_all_sessions_db
+from backend.app.services.speech import transcribe_audio, generate_speech_base64
 
 from core.engine import InterviewEngine
 from core.state import create_interview_state
@@ -77,6 +78,22 @@ def _format_question_response(state: dict, q_data: dict) -> dict:
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+
+@router.post("/audio-start")
+def start_interview_audio(
+    req: StartInterviewRequest,
+    user: Optional[UserProfile] = Depends(get_optional_user),
+):
+    """Starts the interview and returns the first question as TTS audio"""
+    res = start_interview(req, user)
+    
+    # Generate TTS for the first question
+    audio_b64 = None
+    if res.get("current_question") and res["current_question"].get("question"):
+        audio_b64 = generate_speech_base64(res["current_question"]["question"])
+        
+    res["audio_base64"] = audio_b64
+    return res
 
 @router.post("/start")
 def start_interview(
@@ -144,6 +161,40 @@ def get_current_question(session_id: str):
         raise HTTPException(status_code=400, detail="No more questions")
 
     return _format_question_response(state, q_data)
+
+
+@router.post("/{session_id}/audio-answer")
+async def submit_audio_answer(
+    session_id: str,
+    question_id: str = Form(...),
+    audio: UploadFile = File(...),
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    """Submit an answer via a recorded audio blob, transcribed to text, and get the next question as TTS."""
+    audio_bytes = await audio.read()
+    
+    # Transcribe
+    answer_text = transcribe_audio(audio_bytes, filename=audio.filename)
+    
+    # Delegate to the standard submit_answer text endpoint logic
+    req = AnswerRequest(question_id=question_id, answer_text=answer_text, answer_time_seconds=0)
+    res = submit_answer(session_id, req, background_tasks)
+    
+    # The submit_answer response either has a "next_question" (standard) or a "follow_up" (requires_followup)
+    text_to_speak = None
+    if res.get("follow_up"):
+        text_to_speak = res["follow_up"]
+    elif res.get("next_question") and res["next_question"].get("question"):
+        text_to_speak = res["next_question"]["question"]
+        
+    audio_b64 = None
+    if text_to_speak:
+        audio_b64 = generate_speech_base64(text_to_speak)
+        
+    res["audio_base64"] = audio_b64
+    res["transcribed_text"] = answer_text
+    
+    return res
 
 
 @router.post("/{session_id}/answer")
