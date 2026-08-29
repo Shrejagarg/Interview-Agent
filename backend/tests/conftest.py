@@ -9,7 +9,59 @@ instead of hardcoded Python modules or a live database.
 
 import sys
 import os
+import tempfile
 import pytest
+from pathlib import Path
+
+# ── Test-DB quarantine (must run BEFORE any backend import) ──────────────────
+# The engine in backend/app/db/database.py is bound at import time from
+# DATABASE_URL. Point it at a throwaway temp file so tests can never wipe or
+# corrupt the dev database (backend/interview.db). backend/app/__init__.py
+# runs Base.metadata.create_all() on import, so the temp schema is created
+# automatically with no extra wiring.
+_REPO_ROOT = Path(os.path.dirname(__file__)).resolve().parent.parent
+_DEV_DB_PATHS = [
+    _REPO_ROOT / "backend" / "interview.db",
+    _REPO_ROOT / "interview.db",
+]
+
+_fd, _TEST_DB_PATH = tempfile.mkstemp(prefix="interview_test_", suffix=".db")
+os.close(_fd)
+os.environ["DATABASE_URL"] = "sqlite:///" + str(_TEST_DB_PATH).replace("\\", "/")
+_TEST_DB_NAME = os.path.basename(_TEST_DB_PATH)
+
+
+def _dev_db_stamps():
+    return {
+        str(p): (p.stat().st_mtime_ns, p.stat().st_size)
+        for p in _DEV_DB_PATHS
+        if p.exists()
+    }
+
+
+def pytest_sessionstart(session):
+    """Record the dev DB state so pytest_sessionfinish can prove it was untouched."""
+    session._dev_db_stamps_before = _dev_db_stamps()
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Fail loudly if any backend test mutated the development database."""
+    for p in _DEV_DB_PATHS:
+        if not p.exists():
+            continue
+        before = (session._dev_db_stamps_before or {}).get(str(p))
+        after = (p.stat().st_mtime_ns, p.stat().st_size)
+        if before is not None and before != after:
+            raise AssertionError(
+                f"Backend tests mutated the dev database: {p}. "
+                "Tests run against a temp DB (DATABASE_URL override in conftest) "
+                "— restore the file from source control."
+            )
+    try:
+        os.remove(_TEST_DB_PATH)
+    except OSError:
+        pass
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -443,7 +495,8 @@ def _patch_db(monkeypatch):
     # Reset domain registry so it reloads from mocked DB
     _registry_mod.reset_registry()
 
-    # Clean SQLite tables so tests don't leak data between runs
+    # Reset the throwaway temp DB (see DATABASE_URL override at the top of this
+    # file) so tests don't leak rows between runs. The dev DB is never touched.
     try:
         from backend.app.db.database import engine
         from sqlalchemy import text

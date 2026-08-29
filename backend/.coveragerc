@@ -1,0 +1,5 @@
+[run]
+source = app
+
+[report]
+omit = */app/domains/*
