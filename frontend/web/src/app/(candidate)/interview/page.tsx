@@ -6,6 +6,7 @@ import * as api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 type Mode = "mock" | "warmup";
+type InterfaceMode = "voice" | "text";
 
 export default function InterviewSetupPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function InterviewSetupPage() {
   const [loading, setLoading] = useState(true);
   const [selectedDomain, setSelectedDomain] = useState("");
   const [mode, setMode] = useState<Mode>("mock");
+  const [interfaceMode, setInterfaceMode] = useState<InterfaceMode>("voice");
   const [questionCount, setQuestionCount] = useState(5);
   const [experienceLevel, setExperienceLevel] = useState("mid");
   const [starting, setStarting] = useState(false);
@@ -51,7 +53,7 @@ export default function InterviewSetupPage() {
         ? { years_experience: resumeData.years_experience || 0, experience_level: resumeData.experience_level, skills: resumeData.skills, name: resumeData.name }
         : undefined;
       const res = await api.startInterview(selectedDomain, questionCount, experienceLevel, resumePayload);
-      router.push(`/interview/${selectedDomain}/${res.session_id}`);
+      router.push(`/interview/${selectedDomain}/${res.session_id}?mode=${interfaceMode}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to start interview");
     } finally {
@@ -86,29 +88,29 @@ export default function InterviewSetupPage() {
       <div className="glass p-6 space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Configuration</h2>
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Domain</label>
-          <select value={selectedDomain} onChange={(e) => setSelectedDomain(e.target.value)} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-slate-400 focus:outline-none">
+          <label htmlFor="interview-domain" className="block text-xs font-medium text-gray-500 mb-1">Domain</label>
+          <select id="interview-domain" value={selectedDomain} onChange={(e) => setSelectedDomain(e.target.value)} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-slate-400 focus:outline-none">
             <option value="">Select a domain</option>
             {domains.map((d) => <option key={d.slug} value={d.slug}>{d.name}</option>)}
           </select>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Experience Level</label>
-            <select value={experienceLevel} onChange={(e) => setExperienceLevel(e.target.value)} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-slate-400 focus:outline-none">
+            <label htmlFor="interview-experience" className="block text-xs font-medium text-gray-500 mb-1">Experience Level</label>
+            <select id="interview-experience" value={experienceLevel} onChange={(e) => setExperienceLevel(e.target.value)} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-slate-400 focus:outline-none">
               <option value="fresher">Fresher</option>
               <option value="mid">Mid-level</option>
               <option value="senior">Senior</option>
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Questions</label>
-            <input type="number" min={1} max={30} value={questionCount} onChange={(e) => setQuestionCount(Number(e.target.value))} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-slate-400 focus:outline-none" />
+            <label htmlFor="interview-questions" className="block text-xs font-medium text-gray-500 mb-1">Questions</label>
+            <input id="interview-questions" type="number" min={1} max={30} value={questionCount} onChange={(e) => setQuestionCount(Number(e.target.value))} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-slate-400 focus:outline-none" />
           </div>
         </div>
         <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 p-4">
           <p className="text-xs font-medium text-gray-500 mb-2">Resume (optional)</p>
-          <input type="file" accept=".pdf,.docx,.txt,.doc" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleResumeUpload(f); }} className="text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white file:hover:bg-slate-700" disabled={resumeLoading} />
+          <input type="file" aria-label="Resume" accept=".pdf,.docx,.txt,.doc" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleResumeUpload(f); }} className="text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white file:hover:bg-slate-700" disabled={resumeLoading} />
           {resumeLoading && <p className="text-xs text-gray-500 mt-2">Parsing resume...</p>}
           {resumeError && <p className="text-xs text-rose-600 mt-2">{resumeError}</p>}
           {resumeData && (
@@ -118,6 +120,16 @@ export default function InterviewSetupPage() {
               <p><span className="font-medium text-gray-700">Level:</span> {resumeData.experience_level}{resumeData.years_experience ? ` (${resumeData.years_experience} years)` : ""}</p>
             </div>
           )}
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <button onClick={() => setInterfaceMode("voice")} className={`glass p-5 text-left transition-all cursor-pointer ${interfaceMode === "voice" ? "border-teal-500 bg-teal-50/50 ring-1 ring-teal-500/20" : "hover:border-gray-300"}`}>
+            <p className="text-sm font-bold text-slate-900">Voice-first</p>
+            <p className="mt-1 text-xs text-gray-500">Push-to-talk answers with AI voice playback.</p>
+          </button>
+          <button onClick={() => setInterfaceMode("text")} className={`glass p-5 text-left transition-all cursor-pointer ${interfaceMode === "text" ? "border-slate-900 bg-slate-50 ring-1 ring-slate-900/10" : "hover:border-gray-300"}`}>
+            <p className="text-sm font-bold text-slate-900">Typing only</p>
+            <p className="mt-1 text-xs text-gray-500">Classic text chat with the interviewer.</p>
+          </button>
         </div>
         {error && <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>}
         <button onClick={handleStart} disabled={!selectedDomain || starting} className="w-full rounded-lg bg-slate-900 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:bg-gray-300 disabled:cursor-not-allowed cursor-pointer">

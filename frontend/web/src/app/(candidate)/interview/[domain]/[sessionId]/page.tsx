@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { Suspense, useState, useEffect, useRef, useCallback } from "react";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import * as api from "@/lib/api";
+import { VoiceInterview } from "@/features/voice-interview/VoiceInterview";
 
 interface Question {
   id: string;
@@ -28,9 +29,37 @@ function formatTime(seconds: number) {
 }
 
 export default function InterviewRoomPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-3xl py-20 text-center text-sm text-gray-500">
+          Loading interview…
+        </div>
+      }
+    >
+      <ModeSwitch />
+    </Suspense>
+  );
+}
+
+function ModeSwitch() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const sessionId = params.sessionId as string;
+  const domain = params.domain as string;
+  const mode = searchParams.get("mode") ?? "voice";
+
+  if (mode === "text") {
+    return <TextInterviewRoom />;
+  }
+  return <VoiceInterview sessionId={sessionId} domainSlug={domain} />;
+}
+
+function TextInterviewRoom() {
   const params = useParams();
   const router = useRouter();
   const sessionId = params.sessionId as string;
+  const domain = params.domain as string;
 
   const [question, setQuestion] = useState<Question | null>(null);
   const [answer, setAnswer] = useState("");
@@ -179,7 +208,15 @@ export default function InterviewRoomPage() {
           {question && <span className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-bold text-white">{question.index}/{question.total}</span>}
           {question && <span className="text-xs text-gray-500">{question.topic.replace(/_/g, " ")} · {question.difficulty}</span>}
         </div>
-        <div className={`text-sm font-mono font-semibold tabular-nums ${elapsed > 60 ? "text-amber-600" : "text-gray-600"}`}>{formatTime(elapsed)}</div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push(`/interview/${domain}/${sessionId}?mode=voice`)}
+            className="cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+          >
+            Use voice
+          </button>
+          <div className={`text-sm font-mono font-semibold tabular-nums ${elapsed > 60 ? "text-amber-600" : "text-gray-600"}`}>{formatTime(elapsed)}</div>
+        </div>
       </div>
 
       <div className="glass overflow-hidden">

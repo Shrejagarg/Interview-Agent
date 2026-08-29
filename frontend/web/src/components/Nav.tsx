@@ -24,6 +24,7 @@ export default function Nav() {
     { href: "/sessions", label: "Sessions" },
     { href: "/compare", label: "Compare" },
     { href: "/invite", label: "Invite" },
+    { href: "/campaigns", label: "Campaigns" },
   ];
 
   const links = isCompany ? companyLinks : candidateLinks;

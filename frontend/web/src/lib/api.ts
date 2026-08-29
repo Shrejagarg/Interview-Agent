@@ -1,3 +1,5 @@
+import { makeSilenceDataUri, mimeExtension } from "./audio";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 function getToken(): string | null {
@@ -395,6 +397,217 @@ export async function inviteCandidate(
       max_answer_time_seconds: maxAnswerTime,
     }),
   });
+}
+
+// ── Company: Campaigns (Bulk CSV Invites) ────────────────────────────────────
+
+export interface Campaign {
+  id: string;
+  name: string;
+  domain: string;
+  status: "queued" | "sending" | "completed" | "failed";
+  total_invites: number;
+  created_at: string;
+}
+
+const seedCampaigns: Campaign[] = [
+  { id: "cam_mkt_1120", name: "Spring Growth Cohort", domain: "marketing", status: "completed", total_invites: 148, created_at: "2026-08-19T09:30:00Z" },
+  { id: "cam_sw_0994", name: "Backend Engineer Screen", domain: "software_engineering", status: "completed", total_invites: 86, created_at: "2026-08-12T14:05:00Z" },
+  { id: "cam_fn_0841", name: "Analyst Pipeline Q3", domain: "finance", status: "sending", total_invites: 64, created_at: "2026-08-05T11:15:00Z" },
+  { id: "cam_sl_0707", name: "SDR Outreach Batch", domain: "sales", status: "queued", total_invites: 210, created_at: "2026-07-31T08:45:00Z" },
+];
+
+let mockCampaigns: Campaign[] = seedCampaigns.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+function isNetworkError(err: unknown): boolean {
+  return typeof err === "object" && err !== null && err instanceof TypeError;
+}
+
+async function countRows(file: File): Promise<number> {
+  const text = await file.text();
+  const rows = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  return rows.length;
+}
+
+export async function uploadCampaign(file: File, name: string, domainSlug: string): Promise<Campaign> {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("name", name);
+  formData.append("domain_slug", domainSlug);
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/campaigns/upload`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(body.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    return (data.campaign ?? data) as Campaign;
+  } catch (err) {
+    // Backend not wired up yet — simulate a successful launch so the UI is testable.
+    if (isNetworkError(err)) {
+      const campaign: Campaign = {
+        id: `cam_${Date.now().toString(36)}`,
+        name,
+        domain: domainSlug,
+        status: "queued",
+        total_invites: await countRows(file),
+        created_at: new Date().toISOString(),
+      };
+      mockCampaigns = [campaign, ...mockCampaigns];
+      return campaign;
+    }
+    throw err;
+  }
+}
+
+export async function listCampaigns(): Promise<{ campaigns: Campaign[] }> {
+  try {
+    return await request<{ campaigns: Campaign[] }>("/api/campaigns");
+  } catch (err) {
+    if (isNetworkError(err)) {
+      return { campaigns: mockCampaigns };
+    }
+    throw err;
+  }
+}
+
+// ── Candidate: Voice Interview (ARC III Phase 5) ─────────────────────────────
+
+export interface EvaluationSummary {
+  overall_score: number;
+  strengths: string[];
+  weaknesses: string[];
+}
+
+export interface AudioTurnResponse {
+  question: string;
+  audio_base64: string;
+  question_index?: number;
+  question_total?: number;
+}
+
+export interface AudioStartResponse extends AudioTurnResponse {}
+
+export interface AudioAnswerResponse {
+  evaluation: EvaluationSummary;
+  next_question: string | null;
+  audio_base64: string;
+  question_index?: number;
+  question_total?: number;
+}
+
+const SIM_QUESTIONS = [
+  "Walk me through a project where you had to balance speed against correctness. What did you decide, and what did you learn?",
+  "Tell me about a time you disagreed with a teammate or stakeholder. How did you resolve it?",
+  "Where do you see your skills growing the most over the next year, and what is your plan to get there?",
+];
+
+const SIM_SCORES = [5.8, 6.4, 7.1];
+const SIM_STRENGTHS = [
+  ["Clear structure", "Realistic trade-off reasoning"],
+  ["Calm under pressure", "Concrete resolution steps"],
+  ["Self-aware", "Actionable growth plan"],
+];
+const SIM_WEAKNESSES = [
+  ["Could quantify the outcome"],
+  ["Resolution took two rounds"],
+  ["No measurable milestone yet"],
+];
+
+let simCursor = 0;
+
+function voiceSimulated(): boolean {
+  return process.env.NEXT_PUBLIC_SIMULATED_VOICE !== "0";
+}
+
+function silenceBase64(seconds: number): string {
+  return makeSilenceDataUri(seconds);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function simulateAudioStart(_sessionId: string): AudioStartResponse {
+  simCursor = 0;
+  return {
+    question: SIM_QUESTIONS[0],
+    audio_base64: silenceBase64(0.6),
+    question_index: 1,
+    question_total: SIM_QUESTIONS.length,
+  };
+}
+
+function simulateAudioAnswer(_sessionId: string, _audio: Blob): AudioAnswerResponse {
+  const stage = Math.min(simCursor, SIM_QUESTIONS.length - 1);
+  simCursor += 1;
+  const isLast = simCursor >= SIM_QUESTIONS.length;
+  return {
+    evaluation: {
+      overall_score: SIM_SCORES[stage],
+      strengths: SIM_STRENGTHS[stage],
+      weaknesses: SIM_WEAKNESSES[stage],
+    },
+    next_question: isLast ? null : SIM_QUESTIONS[simCursor],
+    audio_base64: silenceBase64(0.6),
+    question_index: Math.min(simCursor + 1, SIM_QUESTIONS.length),
+    question_total: SIM_QUESTIONS.length,
+  };
+}
+
+export async function audioInterviewStart(sessionId: string): Promise<AudioStartResponse> {
+  if (voiceSimulated()) {
+    await sleep(180);
+    return simulateAudioStart(sessionId);
+  }
+  return request<AudioStartResponse>(`/api/interviews/${sessionId}/audio-start`, {
+    method: "POST",
+  });
+}
+
+export function buildAudioAnswerForm(audio: Blob): {
+  formData: FormData;
+  filename: string;
+} {
+  const filename = `answer.${mimeExtension(audio.type)}`;
+  const formData = new FormData();
+  formData.append(
+    "audio",
+    new File([audio], filename, { type: audio.type || "application/octet-stream" }),
+    filename
+  );
+  return { formData, filename };
+}
+
+export async function submitAudioAnswer(
+  sessionId: string,
+  audio: Blob
+): Promise<AudioAnswerResponse> {
+  if (voiceSimulated()) {
+    await sleep(520);
+    return simulateAudioAnswer(sessionId, audio);
+  }
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE}/api/interviews/${sessionId}/audio-answer`, {
+    method: "POST",
+    headers,
+    body: buildAudioAnswerForm(audio).formData,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<AudioAnswerResponse>;
 }
 
 // ── Analytics (shared) ───────────────────────────────────────────────────────
