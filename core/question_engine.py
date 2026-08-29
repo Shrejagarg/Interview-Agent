@@ -38,49 +38,49 @@ QUESTION_TEMPLATES = [
         "id": "tpl_skill_depth",
         "difficulty": "medium",
         "roles": ["mid", "senior"],
-        "template": "I see you have experience with {skill}. Can you walk me through a specific project where you used it and what results you achieved?"
+        "template": "Hi {name}, I see you have experience with {skill}. Can you walk me through a specific project where you used it and what results you achieved?"
     },
     {
         "id": "tpl_skill_strategy",
         "difficulty": "hard",
         "roles": ["mid", "senior"],
-        "template": "You've listed {skill} as a key skill. How would you apply it to increase ROI for a brand with a limited budget?"
+        "template": "So {name}, you've listed {skill} as a key skill. How would you apply it to solve a complex problem with tight deadlines?"
     },
     {
         "id": "tpl_title_challenge",
         "difficulty": "hard",
         "roles": ["senior"],
-        "template": "As a {title}, what was the most challenging marketing decision you had to make and how did you handle it?"
+        "template": "As a {title}, {name}, what was the most challenging technical or strategic decision you had to make and how did you handle it?"
     },
     {
         "id": "tpl_experience_reflection",
         "difficulty": "medium",
         "roles": ["mid", "senior"],
-        "template": "Looking back at your {years} years in marketing, what's the biggest mistake you've made and what did you learn from it?"
+        "template": "Looking back at your {years} years of experience, {name}, what's the biggest mistake you've made and what did you learn from it?"
     },
     {
         "id": "tpl_fresher_aspiration",
         "difficulty": "easy",
         "roles": ["fresher"],
-        "template": "You're interested in marketing, especially {skill}. What drew you to this area?"
+        "template": "Hi {name}, you're clearly interested in this field, especially {skill}. What drew you to this area?"
     },
     {
         "id": "tpl_fresher_skill",
         "difficulty": "easy",
         "roles": ["fresher", "mid"],
-        "template": "I see you mentioned {skill} in your resume. How would you use it to promote a new product launch?"
+        "template": "I see you mentioned {skill} in your resume, {name}. Can you explain how you would use it in a real-world team project?"
     },
     {
         "id": "tpl_category_depth",
         "difficulty": "medium",
         "roles": ["mid", "senior"],
-        "template": "Your background includes {category}. How do you see this evolving in the next 3 years?"
+        "template": "{name}, your background includes {category}. How do you see this evolving over the next 3 years?"
     },
     {
         "id": "tpl_senior_strategy",
         "difficulty": "hard",
         "roles": ["senior"],
-        "template": "You've worked across multiple marketing domains. How would you build a marketing team from scratch for a Series A startup?"
+        "template": "You've worked across multiple domains, {name}. How would you build a team from scratch for a Series A startup?"
     },
 ]
 
@@ -340,6 +340,11 @@ def build_personalized_questions(resume_data, question_count=None):
     cfg_local = get_config()
     count = question_count or cfg_local["interview"]["question_count"]
     experience_level = resume_data.get("experience_level", "unknown")
+    name = resume_data.get("name", "there")
+    if not name.strip():
+        name = "there"
+    name = name.split()[0]
+    
     skills = resume_data.get("skills", {}).get("skills", [])
     experience = resume_data.get("experience", {})
     categories = resume_data.get("skills", {}).get("categories", [])
@@ -358,7 +363,7 @@ def build_personalized_questions(resume_data, question_count=None):
         if tpl["id"] in used_template_ids:
             continue
 
-        q_text = tpl["template"]
+        q_text = tpl["template"].replace("{name}", name)
         filled = False
 
         if "{skill}" in q_text and skills:
@@ -420,19 +425,25 @@ def select_questions(resume_data, question_count=None, domain_questions=None):
     return selected
 
 
-def generate_llm_questions(resume_data, count=5):
+def generate_llm_questions(resume_data, count=5, domain_slug="marketing"):
     from .evaluator import _call_llm
+    from .domain_bridge import get_registry
+
+    registry = get_registry()
+    domain_obj = registry.get(domain_slug)
+    domain_name = domain_obj.name if domain_obj else domain_slug
 
     skills = resume_data.get("skills", {}).get("skills", [])[:5]
     categories = resume_data.get("skills", {}).get("categories", [])[:3]
     experience = resume_data.get("experience", {})
     experience_level = resume_data.get("experience_level", "unknown")
     name = resume_data.get("name", "the candidate")
+    first_name = name.split()[0] if name and name.strip() else "the candidate"
 
     titles = experience.get("job_titles", [])[:3]
     years = experience.get("years")
 
-    prompt = f"""You are an expert marketing interviewer.
+    prompt = f"""You are an expert interviewer for {domain_name}.
 
 Generate {count} unique interview questions for a candidate named {name}.
 Experience level: {experience_level}
@@ -446,7 +457,9 @@ Experience level: {experience_level}
     if categories:
         prompt += f"Domains: {', '.join(categories)}\n"
 
-    prompt += """
+    prompt += f"""
+Ensure that at least one question explicitly uses the candidate's first name ({first_name}) in a conversational manner (e.g. 'So, {first_name}, looking at your resume...') and asks a specific question about one of their previous roles or skills listed above.
+
 For each question, return a JSON array with objects containing:
 - "question": the question text
 - "topic": one of (digital_marketing, seo, social_media, content_marketing, analytics, branding, ppc, email_marketing, situational, automation, product_marketing, influencer_marketing, competitive_analysis, conversion_optimization, personalized)
@@ -518,7 +531,7 @@ def get_question_set(resume_data, question_count=None, domain_slug="marketing"):
 
     llm_questions = []
     if use_llm and resume_data and resume_data.get("experience_level"):
-        llm_questions = generate_llm_questions(resume_data, count=count)
+        llm_questions = generate_llm_questions(resume_data, count=count, domain_slug=domain_slug)
 
     bank_questions = select_questions(resume_data, question_count=count - len(llm_questions), domain_questions=all_domain_questions)
 
