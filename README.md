@@ -1,153 +1,243 @@
-# AI Marketing Interview Simulator
+# AI Interview Simulator (ARC)
 
-An AI-powered interview simulator that conducts marketing interviews using a local LLM (Llama3 via Ollama), parses resumes, generates personalized questions, evaluates answers in real-time, and provides detailed analytics with study recommendations.
+An end-to-end AI-powered interview platform that conducts structured technical and
+marketing interviews, parses resumes, generates personalized questions, evaluates
+answers in real time, collects voice answers, and surfaces analytics for both
+candidates and hiring companies.
+
+**Architecture:** Python `core/` engine + [FastAPI](https://fastapi.tiangolo.com)
+`backend/` API + [Next.js](https://nextjs.org) `frontend/web` SPA with role-based
+routing, SQLAlchemy persistence (dev SQLite / Supabase-compatible schema), and a
+Playwright E2E layer.
+
+---
+
+## Table of Contents
+
+1. [Architecture Overview](#architecture-overview)
+2. [Features](#features)
+3. [Tech Stack](#tech-stack)
+4. [Prerequisites](#prerequisites)
+5. [Setup & Installation](#setup--installation)
+6. [Running the App](#running-the-app)
+7. [Configuration](#configuration)
+8. [API Reference](#api-reference)
+9. [Testing](#testing)
+10. [CI / CD](#ci--cd)
+11. [Project Structure](#project-structure)
+12. [Security Notes](#security-notes)
+13. [Dependency Audits](#dependency-audits)
+14. [License](#license)
+
+---
+
+## Architecture Overview
+
+```
+                    ┌─────────────────────────────────────────────┐
+                    │              frontend/web (Next.js)          │
+                    │  (candidate) | (company) | (auth)            │
+                    │  voice-interview · campaigns · dashboard     │
+                    └───────────────┬─────────────────────────────┘
+                                    │ HTTP / JSON  (CORS: localhost:3000)
+                    ┌───────────────▼─────────────────────────────┐
+                    │             backend/ (FastAPI)               │
+                    │  api/  auth · interviews · campaigns ·       │
+                    │        company · analytics · domains ·       │
+                    │        webhooks                              │
+                    │  services/ speech (STT/TTS) · email          │
+                    │  db/    SQLAlchemy · SQLite / Supabase       │
+                    └───────────────┬─────────────────────────────┘
+                 ┌──────────────────┼──────────────────┐
+                 │ runs the engine  │                  │
+        ┌────────▼────────┐   ┌─────▼─────┐    ┌───────▼──────┐
+        │   core/ (pure)  │   │  SQLite   │    │  Supabase     │
+        │ engine/evaluator│   │  (dev)    │    │  (prod)       │
+        │ resume/questions│   └───────────┘    └───────────────┘
+        └────────┬────────┘
+                 └── LLM: Gemini via OpenAI SDK, or local Ollama
+```
+
+- **`core/`** — pure-Python domain layer (no I/O): interview engine, LLM evaluator
+  with retries, resume parser, question engine, model router. Imported by the API.
+- **`backend/`** — FastAPI application exposing REST endpoints, persistence
+  (SQLAlchemy + SQLite for dev, Supabase schema for prod), webhook dispatch, and
+  voice transcription/TTS service.
+- **`frontend/web/`** — Next.js 14 app-router SPA. Route groups: `(candidate)`,
+  `(company)`, `(auth)`. Includes a simulated-speech voice interview flow.
+
+---
 
 ## Features
 
-### Resume Parsing
-- Supports PDF, DOCX, and TXT formats
-- Extracts name, email, phone, skills, experience, education
-- Classifies experience level (fresher / mid / senior)
-- Scores resume quality out of 100 with configurable weights
+### Core & Engine (`core/`)
+- **Interview orchestration** — question → answer → scoring → follow-up → report.
+- **LLM evaluation** — weighted scoring (relevance / clarity / creativity /
+  communication), verdicts (Strong / Average / Needs Improvement), retry logic,
+  robust JSON parsing.
+- **Model router** — sends pre-screen / generate / evaluate / follow-up to the
+  lowest-cost capable Gemini model; falls back to Ollama `llama3`.
+- **Resume parsing** — PDF (`pdfplumber`), DOCX (`python-docx`), TXT; extracts
+  name, email, phone, education, experience, a 133-skill marketing database
+  across 8 categories; quality scoring (0–100); experience-level classification.
+- **Personalized questions** — 8 templates injecting the candidate's first name,
+  skills, titles, and years; role-aware difficulty distribution; anti-repeat
+  history; topic coverage; randomized order.
+- **Multi-domain question banks** — marketing, software engineering, finance,
+  HR, sales.
 
-### Dynamic Question Engine
-- 60 built-in questions across 14 marketing topics
-- LLM-powered personalized question generation from resume data
-- 8 fill-in-the-blank templates using resume data
-- Difficulty auto-calibrated to candidate experience level
-- Randomized order with anti-repeat across sessions
+### Backend API (`backend/`)
+- **Auth** — register / login / me with JWT (bcrypt-hashed passwords, 72-byte
+  safe pre-hash); role-based access (candidate / company / admin) with dev-mode
+  fallback.
+- **Interviews** — start session, submit text or **voice** answers
+  (`/audio-start`, `/{id}/audio-answer`), fetch next question / follow-up,
+  list / get sessions, results.
+- **Campaigns** — companies bulk-upload candidates from CSV/JSON and launch an
+  interview campaign with generated invite tokens.
+- **Company dashboard** — sessions, candidates, cross-candidate compare,
+  analytics.
+- **Webhooks + ATS** — register webhook endpoints (HMAC-SHA256 signed payloads,
+  retry with backoff, delivery log); SSRF protection on webhook URLs.
+- **Services** — `speech.py` (transcription + TTS), `email.py` (SMTP invites).
 
-### Live Interview
-- Interactive CLI: question → answer → evaluation → follow-up → next
-- Real-time feedback with score breakdown (relevance, clarity, creativity, communication)
-- Per-question timing and progress indicator
-- Graceful Ctrl+C exit with partial session save
-- Follow-up questions generated by LLM
+### Frontend (`frontend/web`)
+- **Candidate** — voice-enabled interview room (mic via Web Speech + waveform),
+  text answers, live question → answer → follow-up, results report.
+- **Company** — dashboard, sessions, candidates, compare, campaigns (bulk
+  invite + email), history.
+- **Auth** — register / login with role-aware post-login redirect.
 
-### Analytics & Reporting
-- Multi-session comparison with trend analysis
-- Skill gap analysis (claimed skills vs actual performance)
-- Auto-generated study recommendations by priority
-- ASCII bar charts and comparison charts
-- Export to JSON, plain text, or structured dict
-- Candidate comparison with rankings
+---
+
+## Tech Stack
+
+| Layer      | Technology                                                            |
+|------------|-----------------------------------------------------------------------|
+| Backend    | Python 3.10+, FastAPI, Uvicorn, SQLAlchemy, Pydantic v2               |
+| Database   | SQLite (dev) / Supabase schema (prod)                                 |
+| LLM        | Google Gemini (OpenAI SDK) + Ollama `llama3` fallback                 |
+| Frontend   | Next.js 14, React 18, TypeScript, Tailwind CSS                        |
+| Voice      | Web Speech API (browser) + Python `speech.py` (STT/TTS)               |
+| Testing    | pytest + pytest-cov (backend/core), Vitest + Testing Library (frontend), Playwright (E2E) |
+| CI         | GitHub Actions (backend / core / frontend)                            |
+| Auth       | PyJWT, passlib[bcrypt]                                                |
+
+---
 
 ## Prerequisites
 
-- Python 3.10+
-- [Ollama](https://ollama.com/) installed and running
-- Llama3 model pulled (`ollama pull llama3`)
+- **Python 3.10+**
+- **Node.js 20+** and npm
+- **Ollama** (optional — only needed for the local `llama3` fallback):
+  `ollama pull llama3`
+- **Free port 8000** (backend) and **3000** (frontend)
 
-## Installation
+---
+
+## Setup & Installation
+
+### 1. Clone & Python venv
 
 ```bash
-# Clone the repository
-git clone <your-repo-url>
+git clone <repo-url>
 cd "interview v2"
 
-# Create virtual environment
+# Create and activate a virtual environment
 python -m venv venv
 venv\Scripts\activate        # Windows
 # source venv/bin/activate   # macOS/Linux
 
-# Install dependencies
+# Install backend + core dependencies
 pip install -r requirements.txt
 ```
 
-## Quick Start
+### 2. Frontend dependencies
 
 ```bash
-# 1. Start Ollama (in a separate terminal)
-ollama serve
-
-# 2. Pull the model (first time only)
-ollama pull llama3
-
-# 3. Run the simulator
-python main.py
+cd frontend/web
+npm install
+cd ../..
 ```
 
-The simulator will:
-1. Check Ollama health and model availability
-2. Ask if you want to upload a resume (optional)
-3. Generate personalized questions
-4. Conduct the interview with real-time feedback
-5. Print a verdict and save the session
+### 3. Environment variables
 
-## Usage Examples
+Copy `.env.example` to `.env` and fill in values. Critical variables:
 
-### Run without resume
-```
-> python main.py
-Do you want to upload a resume? (y/n)
-n
-[Question 1/5 | Topic: seo]
-[EASY] What is SEO and what are its main components?
-Your answer: ...
-```
+| Variable                          | Purpose                                   | Default        |
+|-----------------------------------|-------------------------------------------|----------------|
+| `GOOGLE_API_KEY`                  | Gemini API key (LLM)                      | *(required)*   |
+| `JWT_SECRET_KEY`                  | Token signing secret (≥32 chars)          | *(required)*   |
+| `SUPABASE_URL` / `SUPABASE_*_KEY` | Supabase (prod persistence / auth/GoTrue) | local: `:8000` |
+| `DATABASE_URL`                    | SQLAlchemy URL (SQLite by default)        | dev SQLite cold |
+| `SMTP_*`                          | Email invites (SMTP)                       | gmail defaults |
+| `CORS_ORIGINS`                    | Allowed browser origins                   | `http://localhost` |
+| `ENV`                             | `development` / `production`              | `development`  |
 
-### Run with resume
-```
-> python main.py
-Do you want to upload a resume? (y/n)
-y
-Enter resume file path:
-test_resumes/sample_senior.txt
+> `.env` is git-ignored. `.env.*` files are also ignored (`!`.env.example`).
+> Never commit real secrets.
 
-Resume loaded: John Doe
-Experience level: senior
-Skills found: 12
-Quality score: 82/100
-```
+---
 
-### Run tests
+## Running the App
+
+### Full stack (both servers)
+
 ```bash
-python -m pytest test_core.py test_resume.py test_question_engine.py test_interview_runner.py test_analytics.py -v
+start_servers.bat        # Windows convenience script
 ```
 
-## Project Structure
+### Backend only
+
+```bash
+# from repo root, with venv active
+python -m uvicorn backend.app:app --reload --port 8000
+```
+
+Interactive docs: http://localhost:8000/docs (Swagger UI) and
+`/openapi.json`.
+
+### Frontend only
+
+```bash
+cd frontend/web
+npm run dev              # dev server on :3000
+```
+
+Set `frontend/web/.env.local`:
 
 ```
-interview v2/
-├── main.py                  # Entry point with health checks and resume prompt
-├── config.py                # Config loader with defaults and fallback logic
-├── config.yaml              # All settings (LLM, scoring, resume, questions, logging)
-├── evaluator.py             # LLM calls with retry, JSON parsing, weighted scoring
-├── interviewer.py           # Interactive CLI interview loop with timing
-├── question_engine.py       # Difficulty calibration, randomization, anti-repeat, templates
-├── question_bank.py         # 60 marketing questions across 14 topics
-├── questions.py             # Legacy 5-question set (used in basic tests)
-├── resume_parser.py         # PDF/DOCX/TXT extraction, skill matching, quality scoring
-├── skills_database.py       # 133 marketing skills across 8 categories
-├── state.py                 # Interview state management and JSON export
-├── report.py                # Full report generation with aggregates and timing
-├── analytics.py             # Multi-session comparison, skill gaps, recommendations
-├── requirements.txt         # Python dependencies
-├── test_core.py             # 37 tests (config, state, evaluator, interviewer, questions)
-├── test_resume.py           # 37 tests (resume parsing functions)
-├── test_question_engine.py  # 43 tests (question bank, engine, anti-repeat)
-├── test_interview_runner.py # 21 tests (runner helpers, integration)
-├── test_analytics.py        # 25 tests (analytics, charts, exports)
-└── test_resumes/            # Sample resumes for testing
-    ├── sample_senior.txt
-    ├── sample_fresher.txt
-    └── sample_bad.txt
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 ```
+
+### Production build / E2E
+
+```bash
+cd frontend/web
+npm run build
+npm start                # serves the built app on :3000
+```
+
+---
 
 ## Configuration
 
-All settings are in `config.yaml`. Key sections:
+Backend settings live in `config.yaml` (LLM, scoring weights, interview
+settings, verdict thresholds, resume, question engine, personas, model routes)
+and `backend/app/config.py` (env-driven values, incl. SMTP).
+
+Key tunables in `config.yaml`:
 
 ```yaml
 llm:
-  model: "llama3"
+  provider: "gemini"          # or "ollama"
+  model: "gemini-3.5-flash"
+  fallback_models: [...]
   max_retries: 3
 
 interview:
   question_count: 5
   max_followups_per_question: 1
-  min_answer_length: 5
-  show_feedback: true
 
 scoring:
   relevance_weight: 0.3
@@ -155,61 +245,162 @@ scoring:
   creativity_weight: 0.25
   communication_weight: 0.2
 
-resume:
-  supported_formats: [".pdf", ".docx", ".doc", ".txt"]
-  min_quality_score: 30
+verdicts:
+  strong_threshold: 7
+  average_threshold: 5
 
 question_engine:
-  use_llm_generation: true
+  use_llm_generation: false
   randomize_order: true
-  anti_repeat_window: 50
 ```
 
-## Analytics Usage
+---
 
-```python
-from analytics import (
-    compare_sessions,
-    skill_gap_analysis,
-    generate_recommendations,
-    export_text_report,
-    compare_candidates,
-)
+## API Reference
 
-# Compare past sessions
-comparison = compare_sessions()
+The API is fully self-describing — open `http://localhost:8000/docs` or the
+OpenAPI snapshot. Categories:
 
-# Analyze skill gaps from resume
-gap = skill_gap_analysis(resume_data, session)
+| Router      | Prefix                | Key endpoints                                            |
+|-------------|-----------------------|----------------------------------------------------------|
+| Auth        | `/api/auth`           | `register`, `login`, `me`                                |
+| Interviews  | `/api/interviews`     | `start`, `audio-start`, `{id}/answer`, `{id}/audio-answer`, `{id}/question`, `{id}/results`, lists |
+| Campaigns   | `/api/campaigns`      | `upload` (CSV/JSON bulk), `list`                         |
+| Company     | `/api/company`        | `dashboard`, `sessions`, `candidates`, `compare`         |
+| Analytics   | `/api/analytics`      | `sessions`                                               |
+| Domains     | `/api/domains`        | `list`, detail                                           |
+| Webhooks    | `/api/webhooks`       | `register`, `list`, `deliveries`, `{id}/test`, delete    |
 
-# Get study recommendations
-recs = generate_recommendations(session, resume_data)
+> The test suite pins the real shape of these endpoints in
+> `backend/tests/test_openapi_contract.py`.
 
-# Export plain text report
-text = export_text_report(session, resume_data, filepath="report.txt")
+---
 
-# Compare two candidates
-result = compare_candidates([session_a, session_b])
+## Testing
+
+There are **four** automated Python/JS suites plus a browser E2E layer. Full
+details, run commands, and known caveats live in
+[`tests/README.md`](tests/README.md). Quick reference:
+
+```powershell
+# 1. Backend (80% coverage gate over backend/app, dev DB never touched)
+cd backend
+..\venv\Scripts\python -m pytest
+
+# 2. Core engine (repo root)
+cd "R:\IMP\interview v2"
+.\venv\Scripts\python -m pytest test_core.py test_analytics.py test_question_engine.py test_interview_runner.py test_resume.py test_evaluator.py test_mutation_kills.py tests/test_api.py -p no:cacheprovider
+
+# 3. Frontend (Vitest + typecheck + production build)
+cd frontend/web
+npm run verify
+
+# 4. Browser E2E (fake-device voice)
+npm run build          # required once — E2E serves the production build
+npm run e2e
 ```
 
-## Tech Stack
+**Safety rails** baked into the suites:
 
-- **LLM**: Llama3 via Ollama (local, no API keys needed)
-- **Resume Parsing**: pdfplumber (PDF), python-docx (DOCX)
-- **Config**: PyYAML
-- **Testing**: pytest (163 tests)
-- **Language**: Python 3.10+
+- Backend tests redirect `DATABASE_URL` to a throwaway temp SQLite DB
+  (`backend/tests/conftest.py`) and a guard **fails the run** if the dev
+  `interview.db` is ever touched.
+- LLM calls are mocked — no API key or Ollama needed to run tests.
+- Frontend coverage is scoped to `src/` with an 80% threshold
+  (`vitest.config.ts`); backend gate enforces 80% over `backend/app/`
+  (excluding static domain data).
 
-## Test Coverage
+### Current verification (green)
 
-| Module | Tests | Coverage |
-|--------|-------|----------|
-| Core (config, state, evaluator) | 37 | Config loading, scoring, JSON parsing |
-| Resume Parser | 37 | Extraction, skills, quality, experience levels |
-| Question Engine | 43 | Bank, filtering, anti-repeat, templates, LLM |
-| Interview Runner | 21 | Validation, feedback, Ctrl+C, integration |
-| Analytics | 25 | Comparison, gaps, recommendations, charts |
-| **Total** | **163** | |
+- Backend: **211 passed**, 85% coverage → gate met
+- Core: **214 passed**
+- Frontend: **110 Vitest tests + `tsc --noEmit` + `next build`**
+- E2E: **2 Playwright specs passed**
+
+---
+
+## CI / CD
+
+`.github/workflows/ci.yml` runs three parallel jobs on push/PR:
+
+1. **Backend** — installs `requirements.txt` + `pytest pytest-cov`, runs the
+   full suite with the 80% gate.
+2. **Core** — installs requirements, runs the root engine/evaluator/mutation
+   suites.
+3. **Frontend** — `npm ci`, `npm run verify`, installs Playwright Chromium,
+   `npm run e2e`.
+
+---
+
+## Project Structure
+
+```
+interview v2/
+├── README.md                  # this file
+├── requirements.txt           # Python deps (backend + core + tests)
+├── config.yaml                # engine / scoring / question settings
+├── main.py                    # legacy CLI entry point
+├── core/                      # pure domain layer (engine, evaluator, resume...)
+│   ├── engine.py              # interview state machine
+│   ├── evaluator.py           # LLM calls, weighted scoring, JSON parsing
+│   ├── question_engine.py     # personalized questions, difficulty, anti-repeat
+│   ├── resume_parser.py       # PDF/DOCX/TXT extraction + skill matching
+│   ├── model_router.py        # route to cheapest capable Gemini/Ollama model
+│   └── ...
+├── backend/
+│   ├── app/
+│   │   ├── __init__.py        # FastAPI app factory + router registration
+│   │   ├── api/               # auth, interviews, campaigns, company, analytics, domains, webhooks
+│   │   ├── db/                # database.py, models.py, sessions.py, invites.py, domains.py
+│   │   ├── domains/           # per-domain question banks (marketing, se, finance, hr, sales)
+│   │   └── services/          # speech.py (STT/TTS), email.py (SMTP)
+│   ├── pytest.ini             # -q --cov=app --cov-fail-under=80
+│   ├── .coveragerc
+│   ├── scripts/
+│   │   ├── e2e_server.py      # throwaway temp DB + seeded demo accounts + LLM stub (Playwright webServer)
+│   │   └── seed_dev.py        # seed demo users for local dev
+│   └── tests/                 # API, auth, db CRUD + isolation, openapi contract, speech
+├── frontend/web/
+│   ├── src/
+│   │   ├── app/               # (candidate) (company) (auth) route groups
+│   │   ├── features/voice-interview/   # mic, waveform, speech hooks
+│   │   ├── lib/               # api.ts, audio.ts
+│   │   └── test/              # setup, test-utils, speech fake
+│   ├── e2e/voice-interview.spec.ts
+│   ├── playwright.config.ts
+│   ├── vitest.config.ts
+│   └── package.json
+├── tests/README.md            # detailed test-suite guide
+└── .github/workflows/ci.yml
+```
+
+---
+
+## Security Notes
+
+- **Never commit secrets.** `.env`, `.env.*` are git-ignored; only
+  `.env.example` (placeholders) is tracked.
+- **JWT** — set a strong `JWT_SECRET_KEY` (≥32 chars) before deploying; the app
+  warns loudly if you leave the default.
+- **Passwords** — hashed with bcrypt; passwords longer than bcrypt's 72-byte
+  limit are pre-hashed with SHA-256.
+- **Webhooks** — signed with HMAC-SHA256; signing secret returned once; payload
+  signatures verified; SSRF protection blocks private/loopback webhook URLs
+  unless explicitly allowed.
+- **CORS** — restrict `CORS_ORIGINS` to trusted origins in production.
+
+---
+
+## Dependency Audits
+
+- **Backend (Python):** `pip install pip-audit && pip-audit` — currently
+  **clean** (keep `pip` itself updated).
+- **Frontend (npm):** `npm audit` — currently **5 high-severity advisories**
+  rooted in the pinned `next@14.2.35`. The only offered fix is a breaking
+  jump to `next@16.3.3`; that migration is tracked separately and should not be
+  forced during routine work (the app uses none of the affected surfaces).
+
+---
 
 ## License
 
