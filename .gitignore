@@ -24,3 +24,13 @@ playwright-report/
 # Local session / OS droppings
 latest_session.json
 desktop.ini
+interview.log
+.diag_*.pid
+scratch/
+.gemini/
+graphify-out/
+.asked_questions.json
+skills-lock.json
+test_candidates.csv
+test_email.py
+tryinggg.py

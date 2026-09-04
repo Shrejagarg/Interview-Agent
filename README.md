@@ -92,20 +92,28 @@ Playwright E2E layer.
   fallback.
 - **Interviews** — start session, submit text or **voice** answers
   (`/audio-start`, `/{id}/audio-answer`), fetch next question / follow-up,
-  list / get sessions, results.
+  integrity event reporting, hard-lock enforcement, list / get sessions, results.
+- **Hard-lock** — session terminates when integrity score < 50 or 3+ serious
+  events (tab_switch / face_lost). Locked sessions return 403 on all advance
+  endpoints; report still returns data for the locked screen.
 - **Campaigns** — companies bulk-upload candidates from CSV/JSON and launch an
   interview campaign with generated invite tokens.
 - **Company dashboard** — sessions, candidates, cross-candidate compare,
   analytics.
 - **Webhooks + ATS** — register webhook endpoints (HMAC-SHA256 signed payloads,
   retry with backoff, delivery log); SSRF protection on webhook URLs.
-- **Services** — `speech.py` (transcription + TTS), `email.py` (SMTP invites).
+- **Services** — `speech.py` (Gemini Flash STT with 429/502/503/504 graceful
+  fallback), `email.py` (SMTP invites).
 
 ### Frontend (`frontend/web`)
 - **Candidate** — voice-enabled interview room (mic via Web Speech + waveform),
-  text answers, live question → answer → follow-up, results report.
+  text answers, live question → answer → follow-up, results report, interview
+  history.
+- **Anti-cheat** — camera-based face detection (native API + motion heuristic),
+  integrity scoring with cooldowns and grace periods, paste blocking in answer
+  textarea, voice auto-stop on face loss, hard-lock locked screens.
 - **Company** — dashboard, sessions, candidates, compare, campaigns (bulk
-  invite + email), history.
+  invite + email), custom question banks.
 - **Auth** — register / login with role-aware post-login redirect.
 
 ---
@@ -312,9 +320,9 @@ npm run e2e
 
 ### Current verification (green)
 
-- Backend: **211 passed**, 85% coverage → gate met
+- Backend: **268 passed**, 86.50% coverage → gate met
 - Core: **214 passed**
-- Frontend: **110 Vitest tests + `tsc --noEmit` + `next build`**
+- Frontend: **135 Vitest tests + `tsc --noEmit` + `next build`**
 - E2E: **2 Playwright specs passed**
 
 ---
@@ -363,7 +371,9 @@ interview v2/
 ├── frontend/web/
 │   ├── src/
 │   │   ├── app/               # (candidate) (company) (auth) route groups
-│   │   ├── features/voice-interview/   # mic, waveform, speech hooks
+│   │   ├── features/
+│   │   │   ├── voice-interview/   # mic, waveform, speech hooks, TTS
+│   │   │   └── anti-cheat/        # camera monitor, face detector, integrity
 │   │   ├── lib/               # api.ts, audio.ts
 │   │   └── test/              # setup, test-utils, speech fake
 │   ├── e2e/voice-interview.spec.ts
@@ -388,6 +398,10 @@ interview v2/
   signatures verified; SSRF protection blocks private/loopback webhook URLs
   unless explicitly allowed.
 - **CORS** — restrict `CORS_ORIGINS` to trusted origins in production.
+- **Anti-cheat** — camera monitoring, integrity scoring, and hard-lock session
+  termination enforce exam integrity. The system is designed to tolerate honest
+  behavior (typing, brief focus shifts) while catching genuine violations
+  (sustained tab switching, prolonged face absence, external clipboard usage).
 
 ---
 
