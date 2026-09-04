@@ -30,28 +30,63 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="mx-auto max-w-sm py-16 space-y-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Welcome back</h1>
-        <p className="mt-1 text-sm text-gray-500">Sign in to continue</p>
+    <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md border border-brutal-border bg-brutal-dark p-10 relative">
+        {/* Brutalist accents */}
+        <div className="absolute -top-3 -left-3 w-6 h-6 bg-accent rounded-full"></div>
+        <div className="absolute -bottom-3 -right-3 w-6 h-6 border-2 border-accent rounded-full"></div>
+
+        <div className="text-center mb-10">
+          <h1 className="font-heading text-5xl tracking-wide text-foreground">WELCOME BACK</h1>
+          <p className="mt-2 text-sm text-gray-500 font-sans tracking-wide uppercase">SIGN IN TO YOUR ACCOUNT</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest font-sans">
+              Email Address
+            </label>
+            <input 
+              type="email" 
+              placeholder="HELLO@COMPANY.COM" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              required 
+              className="w-full border border-brutal-border bg-black px-4 py-3 text-sm focus:border-accent focus:outline-none transition-colors text-foreground font-sans uppercase" 
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest font-sans">
+              Password
+            </label>
+            <input 
+              type="password" 
+              placeholder="••••••••" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              required 
+              className="w-full border border-brutal-border bg-black px-4 py-3 text-sm focus:border-accent focus:outline-none transition-colors text-foreground font-sans" 
+            />
+          </div>
+          
+          {error && <div className="border border-red-500/50 bg-red-950/30 p-3 text-sm text-red-400 font-sans">{error}</div>}
+          
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full rounded-full bg-accent px-4 py-4 text-xl font-heading text-black transition-transform hover:scale-105 disabled:bg-gray-700 disabled:text-gray-400 cursor-pointer disabled:hover:scale-100 mt-4"
+          >
+            {loading ? "SIGNING IN..." : "SIGN IN"}
+          </button>
+        </form>
+
+        <p className="text-center text-sm text-gray-500 mt-8 font-sans uppercase tracking-widest">
+          DON&apos;T HAVE AN ACCOUNT?{" "}
+          <Link href="/register" className="text-accent hover:underline">
+            REGISTER
+          </Link>
+        </p>
       </div>
-      <form onSubmit={handleSubmit} className="glass p-6 space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
-          <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-slate-400 focus:outline-none" />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Password</label>
-          <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-slate-400 focus:outline-none" />
-        </div>
-        {error && <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>}
-        <button type="submit" disabled={loading} className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:bg-gray-300 cursor-pointer">
-          {loading ? "Signing in..." : "Sign In"}
-        </button>
-      </form>
-      <p className="text-center text-sm text-gray-500">
-        Don&apos;t have an account? <Link href="/register" className="font-medium text-slate-900 hover:underline">Register</Link>
-      </p>
     </div>
   );
 }

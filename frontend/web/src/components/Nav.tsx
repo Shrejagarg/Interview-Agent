@@ -14,17 +14,17 @@ export default function Nav() {
   const isCompany = user.role === "company";
 
   const candidateLinks = [
-    { href: "/interview", label: "Interview" },
-    { href: "/history", label: "History" },
+    { href: "/interview", label: "INTERVIEW" },
+    { href: "/history", label: "HISTORY" },
   ];
 
   const companyLinks = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/candidates", label: "Candidates" },
-    { href: "/sessions", label: "Sessions" },
-    { href: "/compare", label: "Compare" },
-    { href: "/invite", label: "Invite" },
-    { href: "/campaigns", label: "Campaigns" },
+    { href: "/dashboard", label: "DASHBOARD" },
+    { href: "/candidates", label: "CANDIDATES" },
+    { href: "/sessions", label: "SESSIONS" },
+    { href: "/compare", label: "COMPARE" },
+    { href: "/invite", label: "INVITE" },
+    { href: "/campaigns", label: "CAMPAIGNS" },
   ];
 
   const links = isCompany ? companyLinks : candidateLinks;
@@ -32,39 +32,41 @@ export default function Nav() {
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-gray-200/60 bg-white/80 backdrop-blur-md">
-      <div className={`mx-auto flex items-center justify-between px-4 sm:px-6 py-3 ${isCompany ? "max-w-6xl" : "max-w-3xl"}`}>
-        <div className="flex items-center gap-1">
-          <Link href="/" className="mr-6 text-sm font-bold tracking-tight text-slate-900">
-            Interview Agent
+    <nav className="sticky top-0 z-50 border-b border-brutal-border bg-background">
+      <div className={`mx-auto flex h-16 items-center justify-between px-4 sm:px-6 w-full max-w-7xl`}>
+        <div className="flex items-center gap-8">
+          <Link href="/" className="font-heading text-2xl tracking-wide text-foreground">
+            INTERVIEW AGENT
           </Link>
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                isActive(l.href)
-                  ? "bg-slate-900 font-medium text-white"
-                  : "text-gray-500 hover:bg-gray-100 hover:text-slate-900"
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
+          <div className="hidden md:flex items-center gap-1">
+            {links.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`font-heading text-lg tracking-wide px-4 py-2 transition-colors ${
+                  isActive(l.href)
+                    ? "text-accent border-b-2 border-accent"
+                    : "text-gray-400 hover:text-foreground"
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </div>
         </div>
-        <div className="text-sm">
-          <span className="flex items-center gap-3">
-            <span className="text-gray-500">{user.email}</span>
-            <span className="rounded-full border border-gray-200 px-2 py-0.5 text-xs text-gray-400">
+        <div className="flex items-center gap-4 text-sm font-sans">
+          <div className="hidden md:flex items-center gap-3">
+            <span className="text-gray-400">{user.email}</span>
+            <span className="border border-brutal-border bg-brutal-dark px-2 py-0.5 text-xs uppercase tracking-widest text-gray-300">
               {user.role}
             </span>
-            <button
-              onClick={() => { logout(); router.push("/login"); }}
-              className="rounded-lg border border-gray-200 px-3 py-1 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:text-slate-900 cursor-pointer"
-            >
-              Logout
-            </button>
-          </span>
+          </div>
+          <button
+            onClick={() => { logout(); router.push("/login"); }}
+            className="border border-brutal-border px-4 py-1.5 text-xs uppercase tracking-wider text-gray-400 transition-colors hover:border-accent hover:text-accent cursor-pointer"
+          >
+            LOGOUT
+          </button>
         </div>
       </div>
     </nav>

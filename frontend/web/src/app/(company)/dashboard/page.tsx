@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import * as api from "@/lib/api";
 import StatCard from "@/components/StatCard";
-import { VerdictBadge } from "@/components/Badge";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -20,20 +19,20 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="flex items-center justify-center py-20"><div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-slate-900" /></div>;
-  if (error) return <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>;
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="font-heading text-4xl text-accent animate-pulse">LOADING...</div></div>;
+  if (error) return <div className="border border-red-500/50 bg-red-950/30 p-4 font-sans text-sm text-red-400 uppercase tracking-widest">{error}</div>;
 
   const recent = sessions.slice(0, 8);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">Overview of your hiring pipeline</p>
+    <div className="space-y-12">
+      <div className="border-b border-brutal-border pb-8">
+        <h1 className="font-heading text-7xl tracking-wide text-foreground">DASHBOARD</h1>
+        <p className="mt-2 text-sm text-gray-500 font-sans tracking-widest uppercase">OVERVIEW OF YOUR HIRING PIPELINE</p>
       </div>
 
       {dashboard && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Total Sessions" value={dashboard.total_sessions} icon="📋" />
           <StatCard label="Unique Candidates" value={dashboard.unique_candidates} icon="👤" />
           <StatCard label="Avg Score" value={dashboard.avg_score.toFixed(1)} sub="/ 10" icon="📊" />
@@ -42,18 +41,18 @@ export default function DashboardPage() {
       )}
 
       {dashboard && Object.keys(dashboard.domain_breakdown).length > 0 && (
-        <div className="glass p-6">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">Sessions by Domain</h2>
-          <div className="space-y-3">
+        <div className="border border-brutal-border bg-brutal-dark p-8">
+          <h2 className="mb-8 font-heading text-4xl text-foreground">SESSIONS BY DOMAIN</h2>
+          <div className="space-y-6">
             {Object.entries(dashboard.domain_breakdown).sort((a, b) => b[1] - a[1]).map(([domain, count]) => {
               const pct = dashboard.total_sessions > 0 ? (count / dashboard.total_sessions) * 100 : 0;
               return (
-                <div key={domain} className="flex items-center gap-3">
-                  <span className="w-44 text-sm font-medium text-gray-700">{domain.replace(/_/g, " ")}</span>
-                  <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                    <div className="bg-slate-700 h-full rounded-full" style={{ width: `${pct}%` }} />
+                <div key={domain} className="flex items-center gap-6">
+                  <span className="w-48 text-sm font-bold uppercase tracking-widest text-gray-400 font-sans">{domain.replace(/_/g, " ")}</span>
+                  <div className="flex-1 bg-black border border-brutal-border h-4 overflow-hidden relative">
+                    <div className="bg-accent h-full transition-all duration-1000" style={{ width: `${pct}%` }} />
                   </div>
-                  <span className="w-16 text-right text-sm font-semibold text-gray-700">{count}</span>
+                  <span className="w-16 text-right font-heading text-3xl text-foreground">{count}</span>
                 </div>
               );
             })}
@@ -61,31 +60,37 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="glass overflow-hidden">
-        <div className="border-b border-gray-100 px-6 py-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Recent Candidates</h2>
+      <div className="border border-brutal-border bg-brutal-dark overflow-hidden">
+        <div className="border-b border-brutal-border px-8 py-6 flex justify-between items-center">
+          <h2 className="font-heading text-4xl text-foreground">RECENT CANDIDATES</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm font-sans text-left">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50">
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Candidate</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Domain</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Score</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Verdict</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Date</th>
+              <tr className="border-b border-brutal-border bg-black text-gray-500 uppercase tracking-widest text-xs">
+                <th className="px-8 py-5 font-bold">Candidate</th>
+                <th className="px-8 py-5 font-bold">Domain</th>
+                <th className="px-8 py-5 font-bold text-right">Score</th>
+                <th className="px-8 py-5 font-bold text-center">Verdict</th>
+                <th className="px-8 py-5 font-bold text-right">Date</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-brutal-border">
               {recent.length === 0 ? (
-                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400">No sessions yet. Invite a candidate to get started.</td></tr>
+                <tr><td colSpan={5} className="px-8 py-12 text-center text-gray-500 uppercase tracking-widest">NO SESSIONS YET. INVITE A CANDIDATE.</td></tr>
               ) : recent.map((s) => (
-                <tr key={s.id} onClick={() => router.push(`/sessions/${s.id}`)} className="cursor-pointer transition-colors hover:bg-gray-50/80">
-                  <td className="px-6 py-3 font-medium text-gray-900">{s.user_id?.slice(0, 8) || "Anonymous"}</td>
-                  <td className="px-6 py-3 text-gray-600">{s.domain.replace(/_/g, " ")}</td>
-                  <td className="px-6 py-3 text-right font-semibold text-gray-900">{s.score.toFixed(1)}</td>
-                  <td className="px-6 py-3"><VerdictBadge verdict={s.status === "completed" ? "Completed" : s.status} /></td>
-                  <td className="px-6 py-3 text-right text-gray-500">{new Date(s.started_at).toLocaleDateString()}</td>
+                <tr key={s.id} onClick={() => router.push(`/sessions/${s.id}`)} className="cursor-pointer transition-colors hover:bg-black group">
+                  <td className="px-8 py-5 font-bold text-gray-300 group-hover:text-accent transition-colors">{s.user_id?.slice(0, 8) || "ANONYMOUS"}</td>
+                  <td className="px-8 py-5 text-gray-500 uppercase tracking-widest">{s.domain.replace(/_/g, " ")}</td>
+                  <td className="px-8 py-5 text-right font-heading text-3xl text-foreground">{s.score.toFixed(1)}</td>
+                  <td className="px-8 py-5 text-center">
+                    <span className={`px-3 py-1 text-xs font-bold uppercase tracking-widest border ${
+                      s.status === "completed" ? "border-accent text-accent bg-accent/10" : "border-gray-500 text-gray-500 bg-gray-900"
+                    }`}>
+                      {s.status}
+                    </span>
+                  </td>
+                  <td className="px-8 py-5 text-right text-gray-500 font-mono text-xs">{new Date(s.started_at).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>

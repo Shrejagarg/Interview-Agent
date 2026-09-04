@@ -1,50 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
 
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(fakeSpeechRecognition);
-});
-
-function fakeSpeechRecognition() {
-  const TRANSCRIPT =
-    "I recently improved reliability for a checkout service by adding better error handling and monitoring.";
-
-  class FakeRecognition {
-    lang = "en-US";
-    continuous = false;
-    interimResults = true;
-    maxAlternatives = 1;
-    onstart: (() => void) | null = null;
-    onresult: ((event: unknown) => void) | null = null;
-    onend: (() => void) | null = null;
-    onerror: ((event: unknown) => void) | null = null;
-
-    start() {
-      window.setTimeout(() => this.onstart && this.onstart(), 50);
-      // Record the transcript while still "recording". A real API keeps
-      // producing results (and only ends after the user aborts), so we never
-      // fire onend here — the hook returns the transcript on release.
-      window.setTimeout(() => {
-        this.onresult &&
-          this.onresult({
-            resultIndex: 0,
-            results: [
-              { isFinal: true, length: 1, 0: { transcript: TRANSCRIPT } },
-            ],
-          });
-      }, 300);
-    }
-    stop() {}
-    abort() {}
-  }
-
-  const win = window as unknown as {
-    SpeechRecognition?: unknown;
-    webkitSpeechRecognition?: unknown;
-  };
-  win.SpeechRecognition = FakeRecognition;
-  win.webkitSpeechRecognition = FakeRecognition;
-}
-
 async function speakAnswer(page: Page) {
   const idleMic = page.getByRole("button", {
     name: "Hold to record your answer",
@@ -55,8 +10,8 @@ async function speakAnswer(page: Page) {
   await expect(idleMic).toBeVisible();
   await idleMic.hover();
   await page.mouse.down();
-  // Fake recognition is async (onstart -> onresult -> onend); keep the button
-  // held until the final transcript lands so stop() returns it.
+  // MediaRecorder captures a real (browser fake-mic) stream. Keep the button
+  // held long enough to yield a non-empty audio blob before releasing.
   await expect(recordingMic).toBeVisible();
   await page.waitForTimeout(500);
   await page.mouse.up();
@@ -87,20 +42,23 @@ test("candidate registers and completes a full voice interview", async ({
     'section[aria-label="Current question"]'
   );
   await expect(questionSection.getByText("Interviewer")).toBeVisible();
-  const firstQuestion = ((await questionSection.textContent()) ?? "").trim();
 
-  // Answer the first question with the (fake) voice; mock 2-question session
-  // advances to question 2/2 with feedback from the first answer.
-  await speakAnswer(page);
-  await expect(page.getByRole("status").getByText(/^\d+\.\d$/)).toBeVisible({
-    timeout: 15_000,
-  });
-  await expect(page.getByText("2/2", { exact: true })).toBeVisible();
-  await expect(questionSection).not.toHaveText(firstQuestion, {
-    timeout: 15_000,
-  });
+  // Answer each question (and follow-up) with the (fake) mic; the audio
+  // answer is transcribed server-side and advances the session. Keep
+  // recording until the interview reports complete.
+  for (let i = 0; i < 8; i++) {
+    await speakAnswer(page);
+    // A score is shown per-turn in the status card ("7.1") and, on the final
+    // answer, in the "done" summary ("7.1/10", which drops the status card).
+    // Wait for either, then stop once the interview reports complete.
+    await expect(page.getByText(/\d+\.\d/).first()).toBeVisible({
+      timeout: 15_000,
+    });
+    if (await page.getByText("Interview complete").isVisible().catch(() => false)) {
+      break;
+    }
+  }
 
-  await speakAnswer(page);
   await expect(page.getByText("Interview complete")).toBeVisible({
     timeout: 15_000,
   });

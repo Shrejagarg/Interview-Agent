@@ -20,10 +20,10 @@ const CORNER = {
 } as const;
 
 const STATUS_VIEW = {
-  queued: { dot: "bg-slate-400", label: "text-gray-500" },
-  sending: { dot: "bg-teal-500 animate-pulse", label: "text-teal-700" },
-  completed: { dot: "bg-emerald-500", label: "text-emerald-700" },
-  failed: { dot: "bg-rose-500", label: "text-rose-700" },
+  queued: { dot: "bg-gray-400", label: "text-gray-400" },
+  sending: { dot: "bg-accent animate-pulse", label: "text-accent" },
+  completed: { dot: "bg-green-500", label: "text-green-500" },
+  failed: { dot: "bg-red-500", label: "text-red-500" },
 } as const;
 
 function humanize(slug: string): string {
@@ -146,31 +146,32 @@ export default function CampaignsPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
-      <header>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-teal-700">
-          Candidate operations
+      <header className="border-b border-brutal-border pb-6">
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-500 font-sans">
+          CANDIDATE OPERATIONS
         </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Campaigns</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="font-heading text-6xl tracking-wide text-foreground mt-2">CAMPAIGNS</h1>
+        <p className="mt-2 text-sm text-gray-400 font-sans tracking-widest uppercase">
           Send the same interview brief to a whole roster at once.
         </p>
       </header>
 
-      <section className="glass overflow-hidden" aria-label="New campaign">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-3">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">
-            Outgoing manifest
+      <section className="border border-brutal-border bg-brutal-dark overflow-hidden relative">
+        <div className="absolute -top-3 -left-3 w-6 h-6 bg-accent rounded-full z-10"></div>
+        <div className="flex items-center justify-between border-b border-brutal-border px-8 py-5">
+          <span className="text-xs font-bold uppercase tracking-widest text-gray-400 font-sans">
+            OUTGOING MANIFEST
           </span>
           <span
             aria-hidden="true"
-            className={`h-2 w-2 rounded-full ${file ? "bg-teal-500" : "bg-gray-300"}`}
+            className={`h-3 w-3 rounded-full ${file ? "bg-accent" : "bg-gray-700"}`}
           />
         </div>
 
-        <div className="p-6">
+        <div className="p-8 space-y-6">
           <label
             onDragOver={(event) => event.preventDefault()}
             onDragEnter={(event) => {
@@ -183,18 +184,18 @@ export default function CampaignsPage() {
               if (dragDepth.current === 0) setDragging(false);
             }}
             onDrop={handleDrop}
-            className={`relative block cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-colors focus-within:ring-2 focus-within:ring-teal-500/40 focus-within:outline-none ${
+            className={`relative block cursor-pointer border border-dashed p-12 text-center transition-colors font-sans ${
               dragging
-                ? "border-teal-600 bg-teal-50/70"
-                : "border-gray-300 bg-slate-50/70 hover:border-teal-500/60 hover:bg-teal-50/40"
+                ? "border-accent bg-accent/10"
+                : "border-gray-600 bg-black hover:border-accent hover:bg-accent/5"
             }`}
           >
             {Object.entries(CORNER).map(([position, classes]) => (
               <span
                 key={position}
                 aria-hidden="true"
-                className={`pointer-events-none absolute h-3.5 w-3.5 rounded-sm border-teal-600/70 transition-colors ${
-                  dragging ? "border-teal-600" : "border-teal-600/40"
+                className={`pointer-events-none absolute h-3.5 w-3.5 border-accent/70 transition-colors ${
+                  dragging ? "border-accent" : "border-accent/40"
                 } ${classes}`}
               />
             ))}
@@ -208,60 +209,60 @@ export default function CampaignsPage() {
             />
 
             {!file ? (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-slate-900">
-                  {dragging ? "Release to accept the roster" : "Drop your candidate list (.csv)"}
+              <div className="space-y-4">
+                <p className="text-sm font-bold uppercase tracking-widest text-gray-300">
+                  {dragging ? "RELEASE TO ACCEPT ROSTER" : "DROP YOUR CANDIDATE LIST (.CSV)"}
                 </p>
-                <p className="text-sm text-gray-500">
-                  or <span className="font-medium text-teal-700 underline underline-offset-2">browse files</span>
+                <p className="text-sm font-bold uppercase tracking-widest text-gray-500">
+                  OR <span className="text-accent hover:underline">BROWSE FILES</span>
                 </p>
-                <p className="pt-2 text-xs text-gray-400">
-                  One candidate per row, first row optional header.
+                <p className="pt-2 text-xs uppercase tracking-widest text-gray-600">
+                  ONE CANDIDATE PER ROW, FIRST ROW OPTIONAL HEADER.
                 </p>
               </div>
             ) : (
-              <div className="mx-auto flex max-w-md items-center justify-between gap-4 text-left">
+              <div className="mx-auto flex max-w-md items-center justify-between gap-4 text-left border border-brutal-border bg-brutal-dark p-4">
                 <div className="min-w-0">
-                  <p className="truncate font-mono text-sm font-medium text-slate-900">{file.name}</p>
-                  <p className="mt-0.5 text-xs text-gray-400">
-                    {formatBytes(file.size)} · <span className="font-mono tabular-nums text-teal-700">{rowCount ?? "…"}</span> rows detected
+                  <p className="truncate font-mono text-sm font-bold text-foreground uppercase tracking-widest">{file.name}</p>
+                  <p className="mt-2 text-xs uppercase tracking-widest text-gray-500 font-sans">
+                    {formatBytes(file.size)} · <span className="font-mono text-accent">{rowCount ?? "…"}</span> ROWS DETECTED
                   </p>
                 </div>
-                <span className="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500">
-                  Replace
+                <span className="shrink-0 border border-brutal-border bg-black px-4 py-2 text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-accent hover:border-accent transition-colors">
+                  REPLACE
                 </span>
               </div>
             )}
           </label>
 
-          <div className="mt-5 space-y-4">
+          <div className="space-y-6 pt-4">
             <div>
-              <label htmlFor="campaign-name" className="block text-xs font-medium text-gray-500">
-                Campaign name
+              <label htmlFor="campaign-name" className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 font-sans">
+                CAMPAIGN NAME
               </label>
               <input
                 id="campaign-name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="e.g. Q3 Engineering Screen"
-                className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-teal-600 focus:outline-none"
+                placeholder="E.G. Q3 ENGINEERING SCREEN"
+                className="w-full border border-brutal-border bg-black px-4 py-3 text-sm focus:border-accent focus:outline-none transition-colors text-foreground font-sans uppercase tracking-widest"
               />
             </div>
 
             <div>
-              <label htmlFor="campaign-domain" className="block text-xs font-medium text-gray-500">
-                Domain
+              <label htmlFor="campaign-domain" className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 font-sans">
+                DOMAIN
               </label>
               <select
                 id="campaign-domain"
                 value={domain}
                 onChange={(event) => setDomain(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-teal-600 focus:outline-none"
+                className="w-full border border-brutal-border bg-black px-4 py-3 text-sm focus:border-accent focus:outline-none transition-colors text-foreground font-sans uppercase tracking-widest appearance-none"
               >
-                <option value="">Select a domain</option>
+                <option value="">SELECT A DOMAIN</option>
                 {domains.map((d) => (
                   <option key={d.slug} value={d.slug}>
-                    {d.name}
+                    {d.name.toUpperCase()}
                   </option>
                 ))}
               </select>
@@ -270,82 +271,72 @@ export default function CampaignsPage() {
             <button
               onClick={handleLaunch}
               disabled={!canLaunch}
-              className="w-full rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-teal-800 disabled:bg-gray-300 cursor-pointer"
+              className="w-full mt-8 rounded-full bg-accent px-4 py-4 text-xl font-heading text-black transition-transform hover:scale-105 disabled:bg-gray-800 disabled:text-gray-500 cursor-pointer disabled:hover:scale-100 uppercase tracking-widest"
             >
-              {launching ? "Launching…" : "Launch campaign"}
+              {launching ? "LAUNCHING…" : "LAUNCH CAMPAIGN"}
             </button>
           </div>
         </div>
       </section>
 
-      <section className="glass overflow-hidden" aria-label="Campaign history">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-3">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">
-            Campaign history
+      <section className="border border-brutal-border bg-brutal-dark overflow-hidden">
+        <div className="flex items-center justify-between border-b border-brutal-border px-8 py-5">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 font-sans">
+            CAMPAIGN HISTORY
           </h2>
-          <span className="text-[11px] font-medium text-gray-400">
-            {historyLoading ? "—" : `${campaigns.length} total`}
+          <span className="text-xs font-bold uppercase tracking-widest text-gray-400 font-sans">
+            {historyLoading ? "—" : `${campaigns.length} TOTAL`}
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm font-sans text-left">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50">
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Campaign
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Domain
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Invites sent
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Launched
-                </th>
+              <tr className="border-b border-brutal-border bg-black text-gray-500 uppercase tracking-widest text-xs">
+                <th className="px-8 py-5 font-bold">Campaign</th>
+                <th className="px-8 py-5 font-bold">Domain</th>
+                <th className="px-8 py-5 font-bold">Status</th>
+                <th className="px-8 py-5 font-bold text-right">Invites Sent</th>
+                <th className="px-8 py-5 font-bold text-right">Launched</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-brutal-border">
               {historyLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
-                    Loading campaigns…
+                  <td colSpan={5} className="px-8 py-12 text-center text-gray-500 uppercase tracking-widest font-bold">
+                    LOADING CAMPAIGNS…
                   </td>
                 </tr>
               ) : campaigns.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
-                    No campaigns launched yet. Drop a roster above to start one.
+                  <td colSpan={5} className="px-8 py-12 text-center text-gray-500 uppercase tracking-widest font-bold">
+                    NO CAMPAIGNS LAUNCHED YET. DROP A ROSTER ABOVE TO START ONE.
                   </td>
                 </tr>
               ) : (
                 campaigns.map((campaign) => {
-                  const status = STATUS_VIEW[campaign.status];
+                  const status = STATUS_VIEW[(campaign.status as keyof typeof STATUS_VIEW)] || STATUS_VIEW.completed;
                   return (
-                    <tr key={campaign.id} className="transition-colors hover:bg-gray-50/80">
-                      <td className="px-6 py-3">
-                        <p className="font-medium text-slate-900">{campaign.name}</p>
-                        <p className="mt-0.5 font-mono text-xs text-gray-400">{campaign.id}</p>
+                    <tr key={campaign.id} className="transition-colors hover:bg-black group">
+                      <td className="px-8 py-5">
+                        <p className="font-bold text-gray-300 uppercase tracking-widest group-hover:text-accent transition-colors">{campaign.name}</p>
+                        <p className="mt-1 font-mono text-xs text-gray-600">{campaign.id}</p>
                       </td>
-                      <td className="px-6 py-3">
-                        <span className="rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                          {humanize(campaign.domain)}
+                      <td className="px-8 py-5">
+                        <span className="border border-brutal-border bg-black px-3 py-1 text-xs font-bold uppercase tracking-widest text-gray-400">
+                          {humanize(campaign.domain_slug || campaign.domain || '')}
                         </span>
                       </td>
-                      <td className="px-6 py-3">
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${status.label}`}>
-                          <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+                      <td className="px-8 py-5">
+                        <span className={`inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest ${status.label}`}>
+                          <span aria-hidden="true" className={`h-2 w-2 rounded-full ${status.dot}`} />
                           {campaign.status}
                         </span>
                       </td>
-                      <td className="px-6 py-3 text-right font-mono text-sm font-semibold tabular-nums text-slate-900">
+                      <td className="px-8 py-5 text-right font-heading text-3xl text-foreground">
                         {campaign.total_invites}
                       </td>
-                      <td className="px-6 py-3 text-right text-gray-500 tabular-nums">
+                      <td className="px-8 py-5 text-right text-gray-500 font-mono text-xs uppercase tracking-widest">
                         {formatDate(campaign.created_at)}
                       </td>
                     </tr>

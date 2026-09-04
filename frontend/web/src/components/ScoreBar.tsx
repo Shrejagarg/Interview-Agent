@@ -8,14 +8,14 @@ interface ScoreBarProps {
 
 export default function ScoreBar({ label, score, maxScore = 10 }: ScoreBarProps) {
   const pct = Math.min((score / maxScore) * 100, 100);
-  const color = score >= 7 ? "bg-emerald-500" : score >= 4 ? "bg-amber-400" : "bg-rose-500";
+  const color = score >= 7 ? "bg-emerald-500" : score >= 4 ? "bg-amber-400" : "bg-accent";
   return (
-    <div className="flex items-center gap-3 py-1">
-      <span className="w-44 text-sm font-medium text-gray-700 truncate">{label}</span>
-      <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
-        <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct}%` }} />
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-2">
+      <span className="w-full sm:w-48 text-lg font-heading tracking-wider text-foreground truncate uppercase">{label}</span>
+      <div className="flex-1 border-2 border-white/20 bg-brutal-dark h-6 relative overflow-hidden">
+        <div className={`absolute top-0 left-0 h-full transition-all duration-700 ease-out ${color}`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="w-12 text-right text-sm font-semibold text-gray-700">{score.toFixed(1)}</span>
+      <span className="w-12 text-right text-xl font-heading text-foreground">{score.toFixed(1)}</span>
     </div>
   );
 }

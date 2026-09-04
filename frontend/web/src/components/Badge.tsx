@@ -4,16 +4,16 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<string, string> = {
-  pass: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  fail: "border-rose-200 bg-rose-50 text-rose-700",
-  warning: "border-amber-200 bg-amber-50 text-amber-700",
-  info: "border-blue-200 bg-blue-50 text-blue-700",
-  neutral: "border-gray-200 bg-gray-50 text-gray-600",
+  pass: "border-emerald-400 bg-emerald-400/10 text-emerald-400",
+  fail: "border-accent bg-accent/10 text-accent",
+  warning: "border-amber-400 bg-amber-400/10 text-amber-400",
+  info: "border-cyan-400 bg-cyan-400/10 text-cyan-400",
+  neutral: "border-white/20 bg-white/5 text-gray-300",
 };
 
 export default function Badge({ children, variant = "neutral" }: BadgeProps) {
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${variantStyles[variant]}`}>
+    <span className={`inline-flex items-center px-3 py-1 text-[11px] font-heading uppercase tracking-widest border-2 ${variantStyles[variant]}`}>
       {children}
     </span>
   );

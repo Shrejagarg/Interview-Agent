@@ -23,24 +23,27 @@ export default function SessionsPage() {
   }, [domainFilter, statusFilter]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Sessions</h1>
-        <p className="mt-1 text-sm text-gray-500">{sessions.length} session{sessions.length !== 1 ? "s" : ""}</p>
+    <div className="space-y-8 pb-12">
+      <div className="border-b border-brutal-border pb-6">
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-500 font-sans">
+          INTERVIEW SESSIONS
+        </p>
+        <h1 className="font-heading text-6xl tracking-wide text-foreground mt-2">SESSIONS</h1>
+        <p className="mt-2 text-sm text-gray-400 font-sans tracking-widest uppercase">{sessions.length} SESSION{sessions.length !== 1 ? "S" : ""}</p>
       </div>
       <div className="flex gap-3">
-        <select value={domainFilter} onChange={(e) => setDomainFilter(e.target.value)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-slate-400 focus:outline-none">
-          <option value="">All domains</option>
-          {DOMAINS.map((d) => <option key={d} value={d}>{d.replace(/_/g, " ")}</option>)}
+        <select value={domainFilter} onChange={(e) => setDomainFilter(e.target.value)} className="border border-brutal-border bg-black px-4 py-3 text-sm focus:border-accent focus:outline-none transition-colors text-foreground font-sans uppercase tracking-widest appearance-none">
+          <option value="">ALL DOMAINS</option>
+          {DOMAINS.map((d) => <option key={d} value={d}>{d.replace(/_/g, " ").toUpperCase()}</option>)}
         </select>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-slate-400 focus:outline-none">
-          <option value="">All statuses</option>
-          <option value="completed">Completed</option>
-          <option value="in_progress">In Progress</option>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border border-brutal-border bg-black px-4 py-3 text-sm focus:border-accent focus:outline-none transition-colors text-foreground font-sans uppercase tracking-widest appearance-none">
+          <option value="">ALL STATUSES</option>
+          <option value="completed">COMPLETED</option>
+          <option value="in_progress">IN PROGRESS</option>
         </select>
       </div>
       {loading ? (
-        <div className="flex items-center justify-center py-12"><div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-slate-900" /></div>
+        <div className="flex items-center justify-center py-20"><div className="font-heading text-4xl text-accent animate-pulse">LOADING...</div></div>
       ) : (
         <DataTable
           data={sessions as unknown as Record<string, unknown>[]}
