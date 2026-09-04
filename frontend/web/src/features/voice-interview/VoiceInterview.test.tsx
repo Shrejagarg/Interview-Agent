@@ -16,7 +16,6 @@ import { axe } from "vitest-axe";
 import { render } from "@/test/test-utils";
 import { VoiceInterview } from "./VoiceInterview";
 import {
-  MockSpeechRecognition,
   MockUtterance,
   installFakeSpeech,
   resetFakeSpeech,
@@ -39,8 +38,73 @@ vi.mock("next/navigation", () => ({
 
 let answerCalls = 0;
 let followupCalls = 0;
-let lastAnswerBody: Record<string, unknown> | null = null;
 let lastAuthHeader: string | null = null;
+let lastAnswerBody: string | null = null;
+
+// ── Fake MediaRecorder ─────────────────────────────────────────────────────────
+interface FakeRecorder {
+  state: string;
+  mimeType: string;
+  ondataavailable: ((e: { data: Blob }) => void) | null;
+  onstop: (() => void) | null;
+}
+const mediaRecorders: FakeRecorder[] = [];
+let produceSilence = false;
+
+const getUserMediaMock = vi.fn();
+
+class FakeMediaRecorder {
+  static isTypeSupported = () => true;
+  state = "inactive";
+  mimeType = "audio/webm";
+  ondataavailable: ((e: { data: Blob }) => void) | null = null;
+  onstop: (() => void) | null = null;
+  constructor() {
+    mediaRecorders.push(this);
+  }
+  start() {
+    this.state = "recording";
+  }
+  stop() {
+    this.state = "inactive";
+    const data = produceSilence
+      ? new Blob([], { type: "audio/webm" })
+      : new Blob(["fake-audio-bytes"], { type: "audio/webm" });
+    if (this.ondataavailable) this.ondataavailable({ data });
+    if (this.onstop) this.onstop();
+  }
+}
+
+function installMediaRecorder() {
+  Object.defineProperty(window, "MediaRecorder", {
+    configurable: true,
+    writable: true,
+    value: FakeMediaRecorder,
+  });
+  Object.defineProperty(navigator, "mediaDevices", {
+    configurable: true,
+    writable: true,
+    value: {
+      getUserMedia: getUserMediaMock,
+    },
+  });
+  getUserMediaMock.mockResolvedValue({
+    getTracks: () => [{ stop: () => {} }],
+  });
+}
+
+function uninstallMediaRecorder() {
+  Object.defineProperty(window, "MediaRecorder", {
+    configurable: true,
+    writable: true,
+    value: undefined,
+  });
+  Object.defineProperty(navigator, "mediaDevices", {
+    configurable: true,
+    writable: true,
+    value: undefined,
+  });
+}
 
 function questionResponse(
   question: string,
@@ -51,53 +115,66 @@ function questionResponse(
   return { id, topic: "Backend", difficulty: "medium", question, index, total };
 }
 
+function audioAnswerHandler() {
+  return http.post(
+    `http://localhost:8000/api/interviews/${SESSION}/audio-answer`,
+    async ({ request }) => {
+      answerCalls += 1;
+      lastAuthHeader = request.headers.get("authorization");
+      lastAnswerBody = await request.text();
+      return HttpResponse.json({
+        session_id: SESSION,
+        answer_recorded: true,
+        evaluation: {
+          overall_score: 7.2,
+          strengths: ["Clear structure"],
+          weaknesses: ["Missing metrics"],
+          follow_up: "",
+        },
+        has_next: true,
+        next_question: questionResponse(Q2, 2, 3),
+        transcribed_text: "I debugged a memory leak in production.",
+        progress: "2/3",
+        audio_base64: "U01MPS0=",
+      });
+    }
+  );
+}
+
+function audioFollowupHandler() {
+  return http.post(
+    `http://localhost:8000/api/interviews/${SESSION}/audio-followup`,
+    async ({ request }) => {
+      followupCalls += 1;
+      lastAuthHeader = request.headers.get("authorization");
+      lastAnswerBody = await request.text();
+      return HttpResponse.json({
+        session_id: SESSION,
+        followup_evaluation: {
+          score: 8.1,
+          is_serious: true,
+          improved: true,
+          notes: "Good elaboration",
+        },
+        merged_score: 8.1,
+        has_next: true,
+        next_question: questionResponse(Q2, 2, 3),
+        transcribed_text: "For example, the queue pileup last month…",
+        progress: "2/3",
+        audio_base64: "U01MPS0=",
+      });
+    }
+  );
+}
+
 function standardRequests() {
   return [
     http.get(
       `http://localhost:8000/api/interviews/${SESSION}/question`,
       () => HttpResponse.json(questionResponse(Q1, 1, 3))
     ),
-    http.post(
-      `http://localhost:8000/api/interviews/${SESSION}/answer`,
-      async ({ request }) => {
-        answerCalls += 1;
-        lastAuthHeader = request.headers.get("authorization");
-        lastAnswerBody = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({
-          session_id: SESSION,
-          answer_recorded: true,
-          evaluation: {
-            overall_score: 7.2,
-            strengths: ["Clear structure"],
-            weaknesses: ["Missing metrics"],
-            follow_up: "",
-          },
-          has_next: true,
-          next_question: questionResponse(Q2, 2, 3),
-          progress: "2/3",
-        });
-      }
-    ),
-    http.post(
-      `http://localhost:8000/api/interviews/${SESSION}/followup`,
-      async ({ request }) => {
-        followupCalls += 1;
-        lastAnswerBody = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({
-          session_id: SESSION,
-          followup_evaluation: {
-            score: 8.1,
-            is_serious: true,
-            improved: true,
-            notes: "Good elaboration",
-          },
-          merged_score: 8.1,
-          has_next: true,
-          next_question: questionResponse(Q2, 2, 3),
-          progress: "2/3",
-        });
-      }
-    ),
+    audioAnswerHandler(),
+    audioFollowupHandler(),
   ];
 }
 
@@ -105,42 +182,33 @@ const server = setupServer(...standardRequests());
 
 beforeEach(() => {
   installFakeSpeech();
+  installMediaRecorder();
   localStorage.setItem("auth_token", "tok_voice");
   answerCalls = 0;
   followupCalls = 0;
-  lastAnswerBody = null;
   lastAuthHeader = null;
+  lastAnswerBody = null;
+  produceSilence = false;
+  mediaRecorders.length = 0;
   pushMock.mockClear();
 });
 
 afterEach(() => {
   server.resetHandlers();
   resetFakeSpeech();
+  uninstallMediaRecorder();
   localStorage.removeItem("interview:voice-muted");
 });
 
 beforeAll(() => {
+  process.env.NEXT_PUBLIC_SIMULATED_VOICE = "0";
   server.listen();
 });
 
 afterAll(() => {
+  delete process.env.NEXT_PUBLIC_SIMULATED_VOICE;
   server.close();
 });
-
-async function holdAndSay(text: string) {
-  const mic = screen.getByRole("button", { name: /hold to record/i });
-  fireEvent.pointerDown(mic);
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: /stop recording and send/i })).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    )
-  );
-  act(() => {
-    MockSpeechRecognition.last()?.emitResult(text, true);
-  });
-  fireEvent.pointerUp(mic);
-}
 
 async function holdAndRelease() {
   const mic = screen.getByRole("button", { name: /hold to record/i });
@@ -151,6 +219,8 @@ async function holdAndRelease() {
       "true"
     )
   );
+  // Wait for the fake MediaRecorder to be created before stopping.
+  await waitFor(() => expect(mediaRecorders.length).toBeGreaterThan(0));
   fireEvent.pointerUp(mic);
 }
 
@@ -170,25 +240,20 @@ describe("VoiceInterview", () => {
 
     await expectQuestion(Q1);
     expect(MockUtterance.last()!.text).toBe(Q1);
-    expect(screen.getByText("1/3")).toBeInTheDocument();
-    expect(screen.getByText("AI voice on")).toBeInTheDocument();
+    expect(screen.getByText(/1\/3/)).toBeInTheDocument();
+    expect(screen.getByText(/AI voice on/i)).toBeInTheDocument();
     expect(screen.getByLabelText("Current question")).toBeInTheDocument();
   });
 
-  it("transcribes a held answer and submits standard text to /answer", async () => {
+  it("records an audio answer and submits it to /audio-answer", async () => {
     render(<VoiceInterview sessionId={SESSION} domainSlug={DOMAIN} />);
     await expectQuestion(Q1);
 
-    await holdAndSay("I debugged a memory leak in production.");
+    await holdAndRelease();
 
-    // Standard text POST with question id + auth header
     await waitFor(() => expect(answerCalls).toBe(1));
     expect(lastAuthHeader).toBe("Bearer tok_voice");
-    expect(lastAnswerBody).toEqual({
-      question_id: "q1",
-      answer_text: "I debugged a memory leak in production.",
-      answer_time_seconds: expect.any(Number),
-    });
+    expect(lastAnswerBody).toContain("audio/webm");
 
     // Score bubble
     expect(await screen.findByText("7.2")).toBeInTheDocument();
@@ -205,6 +270,7 @@ describe("VoiceInterview", () => {
   });
 
   it("shows a hint and submits nothing when nothing was heard", async () => {
+    produceSilence = true;
     render(<VoiceInterview sessionId={SESSION} domainSlug={DOMAIN} />);
     await expectQuestion(Q1);
 
@@ -217,7 +283,9 @@ describe("VoiceInterview", () => {
     expect(within(questionSection()).getByText(Q1)).toBeInTheDocument();
   });
 
-  it("surfaces a mid-session mic error on release instead of submitting", async () => {
+  it("surfaces a mic permission error on release instead of submitting", async () => {
+    getUserMediaMock.mockRejectedValueOnce(new Error("Permission denied"));
+
     render(<VoiceInterview sessionId={SESSION} domainSlug={DOMAIN} />);
     await expectQuestion(Q1);
 
@@ -229,12 +297,9 @@ describe("VoiceInterview", () => {
         "true"
       )
     );
-    act(() => {
-      MockSpeechRecognition.last()?.emitError("not-allowed");
-    });
     fireEvent.pointerUp(mic);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/permission/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/permission|device/i);
     expect(answerCalls).toBe(0);
   });
 
@@ -249,11 +314,11 @@ describe("VoiceInterview", () => {
       "true"
     );
     expect(localStorage.getItem("interview:voice-muted")).toBe("1");
-    expect(screen.getByText("AI voice muted")).toBeInTheDocument();
+    expect(screen.getByText(/ai voice muted/i)).toBeInTheDocument();
 
     // Speaking while muted is remembered, not spoken.
     const before = MockUtterance.instances.length;
-    await holdAndSay("Muted answer still recorded");
+    await holdAndRelease();
     await expectQuestion(Q2);
     expect(MockUtterance.instances.length).toBe(before);
 
@@ -268,10 +333,9 @@ describe("VoiceInterview", () => {
     let failing = false;
     server.use(
       http.post(
-        `http://localhost:8000/api/interviews/${SESSION}/answer`,
-        async ({ request }) => {
+        `http://localhost:8000/api/interviews/${SESSION}/audio-answer`,
+        () => {
           answerCalls += 1;
-          lastAnswerBody = (await request.json()) as Record<string, unknown>;
           if (failing) {
             return HttpResponse.json({ detail: "Model timed out" }, { status: 500 });
           }
@@ -286,7 +350,9 @@ describe("VoiceInterview", () => {
             },
             has_next: true,
             next_question: questionResponse(Q2, 2, 3),
+            transcribed_text: "First attempt",
             progress: "2/3",
+            audio_base64: "U01MPS0=",
           });
         }
       )
@@ -295,12 +361,12 @@ describe("VoiceInterview", () => {
     await expectQuestion(Q1);
 
     failing = true;
-    await holdAndSay("First attempt");
+    await holdAndRelease();
     expect(await screen.findByRole("alert")).toHaveTextContent(/model timed out/i);
     expect(within(questionSection()).getByText(Q1)).toBeInTheDocument();
 
     failing = false;
-    await holdAndSay("Second attempt");
+    await holdAndRelease();
     expect(await screen.findByText("7.2")).toBeInTheDocument();
     await expectQuestion(Q2);
     expect(answerCalls).toBe(2);
@@ -309,7 +375,7 @@ describe("VoiceInterview", () => {
   it("ends the session with a report link when there is no next question", async () => {
     server.use(
       http.post(
-        `http://localhost:8000/api/interviews/${SESSION}/answer`,
+        `http://localhost:8000/api/interviews/${SESSION}/audio-answer`,
         () =>
           HttpResponse.json({
             session_id: SESSION,
@@ -322,24 +388,26 @@ describe("VoiceInterview", () => {
             },
             has_next: false,
             next_question: null,
+            transcribed_text: "My final answer",
             progress: "3/3",
+            audio_base64: "U01MPS0=",
           })
       )
     );
     render(<VoiceInterview sessionId={SESSION} domainSlug={DOMAIN} />);
     await expectQuestion(Q1);
 
-    await holdAndSay("My final answer");
-    expect(await screen.findByText("Interview complete")).toBeInTheDocument();
-    expect(screen.getByText("9.0/10")).toBeInTheDocument();
+    await holdAndRelease();
+    expect(await screen.findByText(/interview complete/i)).toBeInTheDocument();
+    expect(screen.getByText("9.0 / 10")).toBeInTheDocument();
     const reportLink = screen.getByRole("link", { name: /view your report/i });
     expect(reportLink).toHaveAttribute("href", `/results/${SESSION}`);
   });
 
-  it("asks a follow-up, submits it to /followup, and merges the score", async () => {
+  it("asks a follow-up, submits it to /audio-followup, and merges the score", async () => {
     server.use(
       http.post(
-        `http://localhost:8000/api/interviews/${SESSION}/answer`,
+        `http://localhost:8000/api/interviews/${SESSION}/audio-answer`,
         () => {
           answerCalls += 1;
           return HttpResponse.json({
@@ -349,12 +417,13 @@ describe("VoiceInterview", () => {
               overall_score: 6.3,
               strengths: ["Clear structure"],
               weaknesses: ["Light on detail"],
-              follow_up: "Can you expand on that?",
             },
             has_next: false,
             next_question: null,
             follow_up: "Can you expand on that? Give me a concrete example.",
+            transcribed_text: "I handle incidents by focusing on impact first.",
             progress: "1/2",
+            audio_base64: "U01MPS0=",
           });
         }
       )
@@ -362,7 +431,7 @@ describe("VoiceInterview", () => {
     render(<VoiceInterview sessionId={SESSION} domainSlug={DOMAIN} />);
     await expectQuestion(Q1);
 
-    await holdAndSay("I handle incidents by focusing on impact first.");
+    await holdAndRelease();
     await waitFor(() => expect(answerCalls).toBe(1));
     expect(await screen.findByText("6.3")).toBeInTheDocument();
 
@@ -372,12 +441,9 @@ describe("VoiceInterview", () => {
       "Can you expand on that? Give me a concrete example."
     );
 
-    await holdAndSay("For example, the queue pileup last month…");
+    await holdAndRelease();
     await waitFor(() => expect(followupCalls).toBe(1));
-    expect(lastAnswerBody).toEqual({
-      answer_text: "For example, the queue pileup last month…",
-      answer_time_seconds: expect.any(Number),
-    });
+    expect(lastAuthHeader).toBe("Bearer tok_voice");
 
     expect(await screen.findByText("8.1")).toBeInTheDocument();
 
@@ -408,8 +474,9 @@ describe("VoiceInterview", () => {
     await expectQuestion(Q1);
   });
 
-  it("degrades gracefully when the browser has no speech recognition", async () => {
+  it("degrades gracefully when the browser has no media recorder", async () => {
     uninstallFakeSpeech();
+    uninstallMediaRecorder();
     render(<VoiceInterview sessionId={SESSION} domainSlug={DOMAIN} />);
 
     await expectQuestion(Q1);

@@ -30,7 +30,7 @@ describe("InterviewSetupPage", () => {
     const typing = screen.getByRole("button", { name: /typing only/i });
     expect(voice).toBeInTheDocument();
     expect(typing).toBeInTheDocument();
-    expect(voice.className.includes("border-teal-500")).toBe(true);
+    expect(voice.className.includes("border-accent")).toBe(true);
   });
 
   it("blocks starting until a domain is selected", async () => {
