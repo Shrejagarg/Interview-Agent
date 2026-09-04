@@ -2,7 +2,7 @@ import os
 import re
 import logging
 from .config import get_config
-from .skills_database import ALL_SKILLS, SKILL_CATEGORIES, MARKETING_SKILLS
+from .skills_database import ALL_SKILLS, SKILL_CATEGORIES, MARKETING_SKILLS, SKILLS_BY_DOMAIN
 
 logger = logging.getLogger(__name__)
 cfg = get_config()
@@ -163,9 +163,15 @@ def extract_name(text):
 
 
 def extract_skills(text):
+    """Extract skills from resume text.
+
+    Returns per-domain skill matches (per_domain_skills) in addition to the
+    flat list used by the existing marketing pipeline.
+    """
     text_lower = text.lower()
-    found = []
-    found_categories = set()
+    found: list[str] = []
+    found_categories: set[str] = set()
+    per_domain: dict[str, list[str]] = {domain: [] for domain in SKILLS_BY_DOMAIN}
 
     for skill in ALL_SKILLS:
         pattern = r"\b" + re.escape(skill) + r"\b"
@@ -173,12 +179,56 @@ def extract_skills(text):
             found.append(skill)
             cat = SKILL_CATEGORIES.get(skill, "unknown")
             found_categories.add(cat)
+            # Attribute skill to every domain that contains it
+            for domain, cats in SKILLS_BY_DOMAIN.items():
+                for cat_skills in cats.values():
+                    if skill in cat_skills:
+                        per_domain[domain].append(skill)
+
+    # De-duplicate per-domain lists
+    per_domain = {d: sorted(set(skills)) for d, skills in per_domain.items()}
 
     return {
-        "skills": sorted(set(found)),
-        "categories": sorted(found_categories),
-        "skill_count": len(set(found))
+        "skills":            sorted(set(found)),
+        "categories":        sorted(found_categories),
+        "skill_count":       len(set(found)),
+        "per_domain_skills": per_domain,
     }
+
+
+# Domain keyword signals (titles + domain-specific jargon)
+_DOMAIN_TITLE_SIGNALS: dict[str, list[str]] = {
+    "marketing":            ["marketing", "brand", "content", "seo", "social media", "growth", "cmo", "demand gen"],
+    "software_engineering": ["engineer", "developer", "programmer", "software", "backend", "frontend", "devops", "architect", "cto"],
+    "finance":              ["finance", "analyst", "investment", "banker", "accounting", "cfo", "portfolio", "trading", "equity"],
+    "hr":                   ["human resources", "hr", "recruiter", "talent", "people operations", "hrbp", "chro"],
+    "sales":                ["sales", "account executive", "business development", "bdr", "sdr", "revenue", "closing"],
+}
+
+
+def infer_domains(resume_data: dict) -> list[str]:
+    """Score each domain and return a ranked list (most likely first).
+
+    Scoring:
+      - +2 per matched per-domain skill
+      - +3 per matched title keyword
+    """
+    scores: dict[str, float] = {domain: 0.0 for domain in SKILLS_BY_DOMAIN}
+
+    # Skill-based signals
+    per_domain = resume_data.get("per_domain_skills") or {}
+    for domain, skills in per_domain.items():
+        scores[domain] += len(skills) * 2
+
+    # Title-based signals
+    titles_text = " ".join(resume_data.get("job_titles", [])).lower()
+    for domain, signals in _DOMAIN_TITLE_SIGNALS.items():
+        for sig in signals:
+            if sig in titles_text:
+                scores[domain] += 3
+
+    ranked = sorted(scores, key=lambda d: scores[d], reverse=True)
+    return [d for d in ranked if scores[d] > 0]
 
 
 def extract_experience(text):
@@ -366,15 +416,20 @@ def parse_resume(file_path):
     experience_level = detect_experience_level(experience)
 
     resume_data = {
-        "file_path": file_path,
-        "name": name,
-        "contact": contact,
-        "skills": skills,
-        "experience": experience,
-        "education": education,
+        "file_path":        file_path,
+        "name":             name,
+        "contact":          contact,
+        "skills":           skills,
+        "per_domain_skills": skills.get("per_domain_skills", {}),
+        "experience":       experience,
+        "education":        education,
         "experience_level": experience_level,
-        "raw_text": raw_text,
+        "raw_text":         raw_text,
+        "job_titles":       experience.get("job_titles", []),
     }
+
+    # Infer which domains the resume aligns with (ranked list)
+    resume_data["matched_domains"] = infer_domains(resume_data)
 
     resume_data["quality"] = score_resume_quality(resume_data)
     resume_data["sections_check"] = check_required_sections(resume_data)
@@ -383,8 +438,11 @@ def parse_resume(file_path):
     min_quality = cfg["resume"]["min_quality_score"]
     resume_data["quality"]["meets_minimum"] = quality_score >= min_quality
 
-    logger.info("Parsed resume: %s (%d skills, %s level, quality %d/100, min %d)",
-                name, skills["skill_count"], experience_level,
-                quality_score, min_quality)
+    logger.info(
+        "Parsed resume: %s (%d skills, %s level, quality %d/100, top domains: %s)",
+        name, skills["skill_count"], experience_level,
+        quality_score, resume_data["matched_domains"][:3],
+    )
 
     return resume_data
+

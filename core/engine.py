@@ -93,6 +93,8 @@ class InterviewEngine:
         min_len = self.cfg["interview"]["min_answer_length"]
         if not answer or not answer.strip():
             return False, "Answer cannot be empty."
+        if answer.strip() == "[SKIPPED]":
+            return False, "Question skipped by user."
         if len(answer.strip()) < min_len:
             return False, f"Answer too short (min {min_len} characters)."
         return True, ""
@@ -114,7 +116,7 @@ class InterviewEngine:
 
         role_ctx = state.get("role_context", {})
         max_time = role_ctx.get("max_answer_time_seconds", 120)
-        if mode == "mock" and answer_time > max_time:
+        if answer_time > max_time:
             time_msg = f"Answer time ({answer_time}s) exceeded limit ({max_time}s)"
             add_warning(state, f"Time limit exceeded on topic '{topic}': {time_msg}")
             add_seriousness_flag(state, {
@@ -124,7 +126,7 @@ class InterviewEngine:
                 "details": time_msg,
             })
 
-        if mode == "mock" and self.cfg["interview"].get("prescreening_enabled", True):
+        if self.cfg["interview"].get("prescreening_enabled", True):
             prescreen = pre_screen_answer(answer, q["question"])
             if not prescreen["pass"]:
                 self._handle_prescreen_fail(state, q, answer, answer_time, prescreen, topic)
