@@ -198,3 +198,10 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserProfile)
 def get_me(user: UserProfile = Depends(get_current_user)):
     return user
+
+
+@router.get("/me/credits")
+def get_my_credits(user: UserProfile = Depends(get_current_user)):
+    """Return the current user's credit balance and reset date."""
+    from backend.app.db.credits import get_credit_summary
+    return get_credit_summary(user.user_id)

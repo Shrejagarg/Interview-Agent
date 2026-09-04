@@ -6,9 +6,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.config import CORS_ORIGINS, ENV, JWT_SECRET_KEY, DEFAULT_JWT_SECRET
-from backend.app.api import auth, domains, interviews, analytics, company, webhooks, campaigns
-from backend.app.db.database import engine, Base
-from backend.app.db.models import User, Invite, InterviewSession, Webhook, WebhookDelivery, Campaign
+from backend.app.api import auth, domains, interviews, analytics, company, webhooks, campaigns, custom, reports
+from backend.app.db.database import engine, Base, migrate_sqlite_missing_columns
+from backend.app.db.models import (
+    User, Invite, InterviewSession, Webhook, WebhookDelivery, Campaign,
+    CustomQuestionBank, CustomQuestion, CreditAllotment, ResultShare,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +29,9 @@ if JWT_SECRET_KEY == DEFAULT_JWT_SECRET:
 
 # Create all database tables (does nothing if they already exist)
 Base.metadata.create_all(bind=engine)
+
+# SQLite dev: add columns added to models after the DB was first created
+migrate_sqlite_missing_columns()
 
 app = FastAPI(
     title="Interview Agent API",
@@ -50,6 +56,8 @@ app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"]
 app.include_router(company.router, prefix="/api/company", tags=["Company"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
 app.include_router(campaigns.router, prefix="/api/campaigns", tags=["Campaigns"])
+app.include_router(custom.router,    prefix="/api/company",   tags=["Custom Banks"])
+app.include_router(reports.router,   prefix="/api/reports",   tags=["Report Export"])
 
 
 @app.get("/")

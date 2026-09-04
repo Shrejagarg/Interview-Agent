@@ -327,7 +327,9 @@ class TestSubmitFollowup:
 # ── Audio answer (speech service fallback) ───────────────────────────────────
 
 class TestAudioAnswer:
-    def test_audio_answer_uses_fallback_transcription(self):
+    def test_audio_answer_uses_fallback_transcription(self, monkeypatch):
+        # No GOOGLE_API_KEY -> placeholder transcription is used (no live Gemini call)
+        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
         sid = _start(count=2).json()["session_id"]
         qid = _current_question(sid)
         r = client.post(
@@ -338,7 +340,7 @@ class TestAudioAnswer:
         assert r.status_code == 200, r.text
         data = r.json()
         assert data["answer_recorded"] is True
-        # No OPENAI_API_KEY -> placeholder transcription is used
+        # No GOOGLE_API_KEY -> placeholder transcription is used
         assert data["transcribed_text"] == "I am testing the voice interface. What is your next question?"
         assert "audio_base64" in data
         assert data["audio_base64"] is None

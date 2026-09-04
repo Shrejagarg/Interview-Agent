@@ -256,6 +256,33 @@ def invite_candidate(
 
     token = str(uuid.uuid4())
 
+    import os
+    from backend.app.services.email import send_bulk_invites
+    from backend.app.db.invites import create_invite_db
+
+    # Save to database
+    create_invite_db({
+        "token": token,
+        "company_id": user.user_id,
+        "domain_slug": req.domain_slug,
+        "question_count": req.question_count,
+        "experience_level": req.experience_level,
+        "status": "active"
+    })
+
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    invite_link = f"{frontend_url}/join?token={token}"
+    
+    # Send email dispatch
+    send_bulk_invites(
+        campaign_name=getattr(domain, "name", req.domain_slug),
+        invites=[{
+            "name": req.email.split("@")[0],
+            "email": req.email,
+            "link": invite_link
+        }]
+    )
+
     return {
         "invite_token": token,
         "email": req.email,

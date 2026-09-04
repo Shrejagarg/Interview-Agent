@@ -1,7 +1,9 @@
 """Centralized configuration — DB, LLM, app settings"""
 
 import os
+from dotenv import load_dotenv
 
+load_dotenv(override=True)
 # ── LLM ───────────────────────────────────────────────────────────────────────
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 MODEL_NAME = os.getenv("MODEL_NAME", "llama3")

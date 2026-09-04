@@ -68,6 +68,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from backend.app.api import interviews as _interviews_mod
 from backend.app.api import company as _company_mod
 from backend.app.api import analytics as _analytics_mod
+from backend.app.api import reports as _reports_mod
 from backend.app.db import domains as _domains_db_mod
 from backend.app.domains import registry as _registry_mod
 
@@ -485,6 +486,9 @@ def _patch_db(monkeypatch):
     monkeypatch.setattr(_analytics_mod, "get_all_sessions_db", _mock_get_all)
     monkeypatch.setattr(_analytics_mod, "get_sessions_by_domain_db", _mock_get_by_domain)
 
+    # sessions — reports.py
+    monkeypatch.setattr(_reports_mod, "load_session_db", _mock_load)
+
     # domains — db/domains.py
     monkeypatch.setattr(_domains_db_mod, "list_domains_db", _mock_list_domains_db)
     monkeypatch.setattr(_domains_db_mod, "get_domain_db", _mock_get_domain_db)
@@ -507,6 +511,10 @@ def _patch_db(monkeypatch):
                 "interview_sessions",
                 "invites",
                 "users",
+                "custom_question_banks",
+                "custom_questions",
+                "credit_allotments",
+                "result_shares",
             ):
                 conn.execute(text(f"DELETE FROM {table}"))
     except Exception:

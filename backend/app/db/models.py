@@ -1,7 +1,7 @@
 """SQLAlchemy Database Models."""
 
 import uuid
-from sqlalchemy import Column, String, Integer, DateTime, Boolean, JSON, ForeignKey, Text
+from sqlalchemy import Column, String, Integer, DateTime, Boolean, JSON, ForeignKey, Text, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -44,9 +44,13 @@ class Invite(Base):
     campaign_id = Column(String, ForeignKey("campaigns.id"), nullable=True)
     recipient_email = Column(String, nullable=True)
     recipient_name = Column(String, nullable=True)
+
+    # Custom question bank (ARC IV)
+    bank_id = Column(String, ForeignKey("custom_question_banks.id"), nullable=True)
     
     company = relationship("User")
     campaign = relationship("Campaign", back_populates="invites")
+    bank = relationship("CustomQuestionBank", foreign_keys=[bank_id])
 
 class InterviewSession(Base):
     __tablename__ = "interview_sessions"
@@ -99,3 +103,63 @@ class WebhookDelivery(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     webhook = relationship("Webhook")
+
+
+# ── ARC IV: Custom Interview Banks ───────────────────────────────────────────
+
+class CustomQuestionBank(Base):
+    __tablename__ = "custom_question_banks"
+
+    id          = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    company_id  = Column(String, ForeignKey("users.id"), nullable=False)
+    name        = Column(String, nullable=False)
+    domain_slug = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+
+    company   = relationship("User")
+    questions = relationship("CustomQuestion", back_populates="bank", cascade="all, delete-orphan")
+
+
+class CustomQuestion(Base):
+    __tablename__ = "custom_questions"
+
+    id            = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    bank_id       = Column(String, ForeignKey("custom_question_banks.id"), nullable=False)
+    topic         = Column(String, nullable=False)
+    difficulty    = Column(String, default="medium")  # easy | medium | hard
+    roles         = Column(JSON, default=list)         # optional role filter list
+    question_text = Column(Text, nullable=False)
+    is_active     = Column(Boolean, default=True)
+
+    bank = relationship("CustomQuestionBank", back_populates="questions")
+
+
+# ── ARC IV: Credits ───────────────────────────────────────────────────────────
+
+class CreditAllotment(Base):
+    __tablename__ = "credit_allotments"
+
+    id                   = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    user_id              = Column(String, ForeignKey("users.id"), unique=True, nullable=False)
+    credits_total        = Column(Integer, default=0)   # 0 = uncapped
+    credits_used         = Column(Integer, default=0)
+    credit_last_reset_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+
+
+# ── ARC IV: Result Share Links ────────────────────────────────────────────────
+
+class ResultShare(Base):
+    __tablename__ = "result_shares"
+
+    token      = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    session_id = Column(String, ForeignKey("interview_sessions.id"), nullable=False)
+    created_by = Column(String, ForeignKey("users.id"), nullable=False)
+    expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    revoked    = Column(Boolean, default=False)
+
+    session = relationship("InterviewSession", foreign_keys=[session_id])
+    creator = relationship("User", foreign_keys=[created_by])

@@ -46,7 +46,7 @@ async def upload_campaign(
 
     # Create campaign
     campaign = Campaign(
-        company_id=user.id,
+        company_id=user.user_id,
         name=name,
         domain_slug=domain_slug
     )
@@ -66,7 +66,7 @@ async def upload_campaign(
         token = secrets.token_urlsafe(32)
         invite = Invite(
             token=token,
-            company_id=user.id,
+            company_id=user.user_id,
             domain_slug=domain_slug,
             campaign_id=campaign.id,
             recipient_email=email,
@@ -77,7 +77,7 @@ async def upload_campaign(
         
         # Build mock email payload
         # In a real app, the base URL would come from config
-        invite_link = f"http://localhost:3000/invite?token={token}"
+        invite_link = f"http://localhost:3000/join?token={token}"
         email_payloads.append({
             "name": recipient_name,
             "email": email,
@@ -90,9 +90,13 @@ async def upload_campaign(
     send_bulk_invites(campaign.name, email_payloads)
 
     return {
-        "message": "Campaign launched successfully",
-        "campaign_id": campaign.id,
-        "invites_generated": len(email_payloads)
+        "id": campaign.id,
+        "name": campaign.name,
+        "domain_slug": campaign.domain_slug,
+        "created_at": campaign.created_at.isoformat(),
+        "total_invites": len(email_payloads),
+        "status": "completed",
+        "message": "Campaign launched successfully"
     }
 
 
@@ -101,7 +105,7 @@ def list_campaigns(
     user: UserProfile = Depends(require_role("company")),
     db: Session = Depends(get_db)
 ):
-    campaigns = db.query(Campaign).filter(Campaign.company_id == user.id).order_by(Campaign.created_at.desc()).all()
+    campaigns = db.query(Campaign).filter(Campaign.company_id == user.user_id).order_by(Campaign.created_at.desc()).all()
     
     return {
         "campaigns": [
@@ -110,7 +114,8 @@ def list_campaigns(
                 "name": c.name,
                 "domain_slug": c.domain_slug,
                 "created_at": c.created_at.isoformat(),
-                "total_invites": len(c.invites)
+                "total_invites": len(c.invites),
+                "status": "completed"
             }
             for c in campaigns
         ]
@@ -123,7 +128,7 @@ def get_campaign(
     user: UserProfile = Depends(require_role("company")),
     db: Session = Depends(get_db)
 ):
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id, Campaign.company_id == user.id).first()
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id, Campaign.company_id == user.user_id).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
         
