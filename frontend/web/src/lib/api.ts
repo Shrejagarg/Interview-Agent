@@ -10,9 +10,13 @@ function getToken(): string | null {
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
   };
+  
+  if (!(options.body instanceof FormData) && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -160,6 +164,9 @@ export interface Report {
   domain: string;
   experience_level: string;
   status: string;
+  locked?: boolean;
+  locked_reason?: string | null;
+  integrity_score?: number;
   started_at: string;
   finished_at: string | null;
   questions_total: number;
@@ -189,8 +196,32 @@ export async function startInterview(domainSlug: string, questionCount: number, 
     body: JSON.stringify({
       domain_slug: domainSlug,
       question_count: questionCount,
-      experience_level: experienceLevel || undefined,
-      resume_data: resumeData || undefined,
+      experience_level: experienceLevel,
+      resume_data: resumeData
+    }),
+  });
+}
+
+export interface InviteDetails {
+  token: string;
+  domain_slug: string;
+  domain_name: string;
+  question_count: number;
+  experience_level?: string;
+  status: string;
+}
+
+export async function getInviteDetails(token: string) {
+  return request<InviteDetails>(`/api/interviews/invite/${token}`);
+}
+
+export async function startInterviewFromInvite(token: string, mode: "voice" | "text" = "voice", resumeData?: Record<string, unknown>) {
+  return request<InterviewStartResponse>("/api/interviews/start-from-invite", {
+    method: "POST",
+    body: JSON.stringify({
+      token,
+      mode,
+      resume_data: resumeData
     }),
   });
 }
@@ -219,6 +250,32 @@ export async function submitFollowup(sessionId: string, answerText: string, answ
       answer_text: answerText,
       answer_time_seconds: answerTimeSeconds,
     }),
+  });
+}
+
+export interface IntegrityEventResponse {
+  event_type: string;
+  recorded: boolean;
+  integrity_score: number;
+  locked?: boolean;
+  locked_reason?: string | null;
+}
+
+export async function reportIntegrityEvent(sessionId: string, eventType: string, detail?: string) {
+  return request<IntegrityEventResponse>(`/api/interviews/${sessionId}/integrity-event`, {
+    method: "POST",
+    body: JSON.stringify({ event_type: eventType, detail }),
+  });
+}
+
+
+export async function submitAudioFollowup(sessionId: string, audioBlob: Blob) {
+  const formData = new FormData();
+  formData.append("audio", audioBlob, audioBlob.type.includes("mp4") ? "audio.mp4" : "audio.webm");
+
+  return request<AudioAnswerResponse>(`/api/interviews/${sessionId}/audio-followup`, {
+    method: "POST",
+    body: formData,
   });
 }
 
@@ -405,6 +462,7 @@ export interface Campaign {
   id: string;
   name: string;
   domain: string;
+  domain_slug?: string;
   status: "queued" | "sending" | "completed" | "failed";
   total_invites: number;
   created_at: string;
@@ -498,10 +556,25 @@ export interface AudioStartResponse extends AudioTurnResponse {}
 
 export interface AudioAnswerResponse {
   evaluation: EvaluationSummary;
-  next_question: string | null;
+  next_question:
+    | string
+    | {
+        id: string;
+        topic: string;
+        difficulty: string;
+        question: string;
+        index: number;
+        total: number;
+      }
+    | null;
   audio_base64: string;
   question_index?: number;
   question_total?: number;
+  transcribed_text?: string;
+  merged_score?: number;
+  follow_up?: string;
+  has_next?: boolean;
+  session_id?: string;
 }
 
 const SIM_QUESTIONS = [
@@ -525,7 +598,7 @@ const SIM_WEAKNESSES = [
 let simCursor = 0;
 
 function voiceSimulated(): boolean {
-  return process.env.NEXT_PUBLIC_SIMULATED_VOICE !== "0";
+  return process.env.NEXT_PUBLIC_SIMULATED_VOICE === "1";
 }
 
 function silenceBase64(seconds: number): string {
@@ -558,6 +631,7 @@ function simulateAudioAnswer(_sessionId: string, _audio: Blob): AudioAnswerRespo
     },
     next_question: isLast ? null : SIM_QUESTIONS[simCursor],
     audio_base64: silenceBase64(0.6),
+    transcribed_text: "[Simulated Answer]",
     question_index: Math.min(simCursor + 1, SIM_QUESTIONS.length),
     question_total: SIM_QUESTIONS.length,
   };
@@ -610,8 +684,6 @@ export async function submitAudioAnswer(
   return res.json() as Promise<AudioAnswerResponse>;
 }
 
-// ── Analytics (shared) ───────────────────────────────────────────────────────
-
 export async function listAnalyticsSessions(domain?: string) {
   const qs = domain ? `?domain=${domain}` : "";
   return request<{ sessions: unknown[]; total: number }>(`/api/analytics/sessions${qs}`);
@@ -621,4 +693,75 @@ export async function getRecommendations(sessionId: string) {
   return request<{ recommendations: unknown[]; overall_score: number; verdict: string }>(
     `/api/analytics/recommendations/${sessionId}`
   );
+}
+
+// ── Custom Question Banks (company) ──────────────────────────────────────────
+
+export interface CustomQuestion {
+  id: string;
+  bank_id: string;
+  topic: string;
+  difficulty: "easy" | "medium" | "hard";
+  roles: string[];
+  question_text: string;
+  is_active: boolean;
+}
+
+export interface CustomQuestionBank {
+  id: string;
+  company_id: string;
+  name: string;
+  domain_slug: string;
+  description: string | null;
+  created_at: string;
+  question_count: number;
+  questions?: CustomQuestion[];
+}
+
+export async function listBanks(): Promise<{ banks: CustomQuestionBank[] }> {
+  return request("/api/company/banks");
+}
+
+export async function createBank(data: { name: string; domain_slug: string; description?: string }): Promise<CustomQuestionBank> {
+  return request("/api/company/banks", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function getBank(bankId: string): Promise<CustomQuestionBank> {
+  return request(`/api/company/banks/${bankId}`);
+}
+
+export async function updateBank(bankId: string, data: { name?: string; description?: string }): Promise<CustomQuestionBank> {
+  return request(`/api/company/banks/${bankId}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function deleteBank(bankId: string): Promise<void> {
+  return request(`/api/company/banks/${bankId}`, { method: "DELETE" });
+}
+
+export async function addQuestion(bankId: string, data: {
+  topic: string; difficulty: string; question_text: string; roles?: string[];
+}): Promise<CustomQuestion> {
+  return request(`/api/company/banks/${bankId}/questions`, { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function updateQuestion(bankId: string, questionId: string, data: Partial<CustomQuestion>): Promise<CustomQuestion> {
+  return request(`/api/company/banks/${bankId}/questions/${questionId}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function deleteQuestion(bankId: string, questionId: string): Promise<void> {
+  return request(`/api/company/banks/${bankId}/questions/${questionId}`, { method: "DELETE" });
+}
+
+// ── Credits ───────────────────────────────────────────────────────────────────
+
+export interface CreditSummary {
+  credits_total: number;
+  credits_used: number;
+  credits_remaining: number | null;
+  uncapped: boolean;
+  resets_at: string;
+}
+
+export async function getMyCredits(): Promise<CreditSummary> {
+  return request("/api/auth/me/credits");
 }
